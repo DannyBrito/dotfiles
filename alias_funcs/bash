@@ -1,0 +1,87 @@
+# cd-directories
+alias cd-dev="cd ${dev_dir}"
+alias cd-config="cd ${config_dir}"
+alias cd-dotfiles="cd ${dev_dir}/danny-gh/dotfiles"
+alias ..="cd .."
+alias ...="cd ../.."
+
+# code quick open
+alias ecalias="code ${alias_funcs_dir}/bash"
+alias ecgit="code ${alias_funcs_dir}/git"
+alias ecbashrc="code ${HOME}/.bashrc"
+
+alias g="git"
+alias k="kubectl"
+alias d="docker"
+
+alias cc="clear"
+
+function git-cred(){
+    if [[ -e "${config_dir}/cred.env" ]]; then
+        export $(xargs <${config_dir}/cred.env)
+    else
+        echo "no cred.env found"
+    fi
+}
+
+function git-new-cred(){
+    if [[ -e "${config_dir}/new_cred.env" ]]; then
+        export $(xargs <${config_dir}/new_cred.env)
+    else
+        echo "no new_cred.env found"
+    fi
+}
+
+function cat() {
+    if command -v batcat &> /dev/null
+    then
+        batcat "$@"
+    else
+        cat "$@"
+    fi
+}
+
+# setup autocompletion
+# complete -o default -F __start_kubectl k
+
+if [ -f "/usr/share/bash-completion/completions/git" ]; then
+    source /usr/share/bash-completion/completions/git
+    __git_complete g __git_main
+else
+    echo "Error loading git completions"
+fi
+
+# functions
+function lsa(){
+    echo "Running: ls -a"
+    ls -a
+}
+
+function xx(){
+    echo "Running: exit 0"
+    exit 0
+}
+
+function sh-restart(){
+    . ~/.bashrc
+}
+
+# check given vs calculated
+# example: checksum 69274fd3b9e65b39e33070376400b7e31664388cdee012591fabc849bee4258e kubernetes.tar.gz
+function checksum(){
+    if [ -z "$1" || -z "$2" ]; then
+        echo "usage: checksum <sha-num> <file> (e.g checksum 6...e k8s.tar.gz)"
+        exit 1
+    fi
+    local given=$1
+    local fileToCheck=$2
+    echo "$given $fileToCheck" | sha256sum -c
+}
+
+function server() {
+    local port="${1:-8000}"
+    sleep 1 && open "http://localhost:${port}/" &
+    # Set the default Content-Type to `text/plain` instead of `application/octet-stream`
+    # And serve everything as UTF-8 (although not technically correct, this doesn’t break anything for binary files)
+    python3 -c $'import http.server;\nmap = http.server.SimpleHTTPRequestHandler.extensions_map;\nmap[""] = "text/plain";\nfor key, value in map.items():\n\tmap[key] = value + ";charset=UTF-8";\nhttp.server.test(HandlerClass=http.server.SimpleHTTPRequestHandler, port=int('$port'))'
+}

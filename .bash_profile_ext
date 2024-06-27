@@ -1,0 +1,14 @@
+source ${HOME}/.config/db_setup_config/alias_funcs/env_base
+
+# Case-insensitive globbing (used in pathname expansion)
+shopt -s nocaseglob;
+# Append to the Bash history file, rather than overwriting it
+shopt -s histappend;
+# Autocorrect typos in path names when using `cd`
+shopt -s cdspell;
+
+for file in $alias_funcs_dir/{bash,docker,az-cli,installs,tailscale,git,extra,github-cli}; do
+	[ -r "$file" ] && [ -f "$file" ] && source "$file";
+done
+
+unset file;
