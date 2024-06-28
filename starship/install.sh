@@ -1,5 +1,8 @@
 set -e
 
+# Install font:
+$PWD/starship/install-font.sh
+# Install starship
 curl -sS https://starship.rs/install.sh | sh
 
 mkdir -p $HOME/.config
