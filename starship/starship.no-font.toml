@@ -1,0 +1,29 @@
+# Get editor completions based on the config schema
+format = "$username$directory$git_branch$env_var$sudo$line_break$character"
+right_format = "$memory_usage"
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# Inserts a blank line between shell prompts
+add_newline = true
+
+# Replace the "❯" symbol in the prompt with "➜"
+[character] # The name of the module we are configuring is "character"
+success_symbol = "[➜](bold green)" # The "success_symbol" segment is being set to "➜" with the color "bold green"
+
+# Disable the package module, hiding it from the prompt completely
+[memory_usage]
+disabled = false
+threshold = -1
+
+[git_branch]
+symbol = "🌱 "
+format = "on [$symbol$branch]($style) "
+style = "bold purple"
+
+[directory]
+truncation_length = 1
+
+[username]
+show_always = true
+style_root = "bold green"
+style_user = "bold green"

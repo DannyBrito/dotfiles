@@ -13,4 +13,8 @@ for file in $alias_funcs_dir/{bash,docker,az-cli,installs,tailscale,git,extra,gi
 	[ -r "$file" ] && [ -f "$file" ] && source "$file";
 done
 
+if [[ $TERM_PROGRAM == "Apple_Terminal" ]]; then
+	export STARSHIP_CONFIG="${HOME}/.config/starship.no-font.toml"
+fi
+
 unset file;
