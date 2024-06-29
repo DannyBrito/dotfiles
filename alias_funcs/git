@@ -190,6 +190,10 @@ function git-unset-email(){
     unset GIT_COMMITTER_EMAIL
 }
 
+function gdiff(){
+    git diff --name-only --relative --diff-filter=d | xargs bat --diff
+}
+
 # AUTO_COMPLETES FUNCTIONS:
 
 _gitremotes_completion() {

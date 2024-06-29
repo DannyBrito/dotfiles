@@ -1,7 +1,8 @@
 # cd-directories
 alias cd-dev="cd ${dev_dir}"
 alias cd-config="cd ${config_dir}"
-alias cd-dotfiles="cd ${dev_dir}/danny-gh/dotfiles"
+alias cd-dotfiles="cd ${_dotfiles_dir}"
+
 alias ..="cd .."
 alias ...="cd ../.."
 
@@ -9,6 +10,7 @@ alias ...="cd ../.."
 alias ecalias="code ${alias_funcs_dir}/bash"
 alias ecgit="code ${alias_funcs_dir}/git"
 alias ecbashrc="code ${HOME}/.bashrc"
+alias eczshrc="code ${HOME}/.zshrc"
 
 alias g="git"
 alias k="kubectl"
@@ -32,14 +34,17 @@ function git-new-cred(){
     fi
 }
 
-function cat() {
-    if command -v batcat &> /dev/null
-    then
-        batcat "$@"
-    else
-        cat "$@"
-    fi
+function cat_fallback() {
+  if command -v bcat > /dev/null 2>&1; then
+    bcat "$@"
+  elif command -v bat > /dev/null 2>&1; then
+    bat "$@"
+  else
+    cat "$@"
+  fi
 }
+
+alias cat='cat_fallback'
 
 # setup autocompletion
 # complete -o default -F __start_kubectl k
@@ -61,7 +66,7 @@ function xx(){
 }
 
 function sh-restart(){
-    . ~/.bashrc
+    . ~/.${SHELL##*/}rc
 }
 
 # check given vs calculated
