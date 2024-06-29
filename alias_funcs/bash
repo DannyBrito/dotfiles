@@ -1,7 +1,8 @@
 # cd-directories
 alias cd-dev="cd ${dev_dir}"
 alias cd-config="cd ${config_dir}"
-alias cd-dotfiles="cd ${dev_dir}/danny-gh/dotfiles"
+alias cd-dotfiles="cd ${_dotfiles_dir}"
+
 alias ..="cd .."
 alias ...="cd ../.."
 
