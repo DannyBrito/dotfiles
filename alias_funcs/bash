@@ -9,6 +9,7 @@ alias ...="cd ../.."
 alias ecalias="code ${alias_funcs_dir}/bash"
 alias ecgit="code ${alias_funcs_dir}/git"
 alias ecbashrc="code ${HOME}/.bashrc"
+alias eczshrc="code ${HOME}/.zshrc"
 
 alias g="git"
 alias k="kubectl"
@@ -64,7 +65,7 @@ function xx(){
 }
 
 function sh-restart(){
-    . ~/.bashrc
+    . ~/.${SHELL##*/}rc
 }
 
 # check given vs calculated

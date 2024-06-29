@@ -12,9 +12,8 @@ ln -s $PWD/starship/starship.toml $HOME/.config/starship.toml
 
 ln -s $PWD/vars.env $config_dir/vars.env
 
-# TODO: handle zshrc?
-
-cat << EOF >> ~/.bashrc
+pth="~/.${SHELL##*/}rc"
+cat << EOF >> $pth
 
 # start custom alias/funcs setup
 source ${HOME}/.bash_profile_ext
