@@ -34,17 +34,22 @@ function git-new-cred(){
     fi
 }
 
-function cat_fallback() {
-  if command -v bcat > /dev/null 2>&1; then
-    bcat "$@"
+function bat_fallback() {
+	if command -v bcat > /dev/null 2>&1; then
+		bcat $@
   elif command -v bat > /dev/null 2>&1; then
-    bat "$@"
-  else
-    cat "$@"
+		bat $@
+  elif command -v batcat > /dev/null 2>&1; then
+		batcat $@
+  elif command -v cat > /dev/null 2>&1; then
+		cat $@
+	else
+		echo error
+		return 1
   fi
 }
 
-alias cat='cat_fallback'
+alias bat='bat_fallback'
 
 # setup autocompletion
 # complete -o default -F __start_kubectl k
@@ -66,7 +71,7 @@ function xx(){
 }
 
 function sh-restart(){
-    . ~/.${SHELL##*/}rc
+    exec $SHELL
 }
 
 # check given vs calculated

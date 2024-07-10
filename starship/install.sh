@@ -1,5 +1,7 @@
 set -e
 
+source $PWD/installer/helpers.sh
+
 # Install font:
 $PWD/starship/install-font.sh
 # Install starship
@@ -10,12 +12,11 @@ mv $HOME/.config/starship.toml $HOME/.config/starship.old.toml || true
 ln -s $PWD/starship/starship.toml $HOME/.config/starship.toml
 ln -s $PWD/starship/starship.no-font.toml $HOME/.config/starship.no-font.toml
 
-cshell="${SHELL##*/}"
-pth="~/.${cshell}rc"
+pth="$(get_startup_file_path)"
 cat << EOF >> $pth
 
 # Startship Setup
-eval "\$(starship init ${cshell})"
+eval "\$(starship init $(get_shell_type))"
 
 EOF
 
