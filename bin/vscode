@@ -1,0 +1,30 @@
+#! /usr/bin/env bash
+
+script="$(find ~/.vscode-server/bin -iname code | tail -n 1)"
+if [ -z "${script}" ]; then
+    echo "VSCode remote script not found"
+    exit 1
+fi
+
+sockets="$(find /run/user/${UID}/ -iname "vscode-ipc-*" 2>/dev/null)"
+for s in $sockets; do
+    out="$(socat /dev/null "UNIX-CONNECT:${s}" 2>&1)"
+    if [ $? -eq 0 ]; then
+        socket="${s}"
+        break
+    fi
+    if [[ "${out}" = *"Connection refused"* ]]; then
+        rm "${s}"
+    fi
+done
+if [ -z "${socket}" ]; then
+    echo "VSCode IPC socket not found"
+    exit 1
+fi
+
+export VSCODE_IPC_HOOK_CLI="${socket}"
+if [ ! -v 1 ]; then
+    ${script} .
+else
+    ${script} $@
+fi

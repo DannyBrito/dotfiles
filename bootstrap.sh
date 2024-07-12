@@ -4,6 +4,7 @@ config_dir="${HOME}/.config/db_setup_config"
 mkdir -p $config_dir
 
 ln -s $PWD/alias_funcs $config_dir/alias_funcs
+ln -s $PWD/bin $config_dir/bin
 ln -s $PWD/.bash_profile_ext $HOME/.bash_profile_ext
 ln -s $PWD/starship/starship.toml $HOME/.config/starship.toml
 
@@ -18,6 +19,9 @@ cat << EOF >> $pth
 
 # start custom alias/funcs setup
 source ${HOME}/.bash_profile_ext
+
+# adding bin to path
+export PATH="${config_dir}/bin:\$PATH"
 
 EOF
 
