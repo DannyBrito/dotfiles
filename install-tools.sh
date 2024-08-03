@@ -8,3 +8,6 @@ $PWD/fzf/install.sh
 
 echo "installing bcat:"
 $PWD/bcat/install.sh
+
+echo "installing tmux:"
+$PWD/tmux/install.sh

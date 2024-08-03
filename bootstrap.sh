@@ -6,7 +6,6 @@ mkdir -p $config_dir
 ln -s $PWD/alias_funcs $config_dir/alias_funcs
 ln -s $PWD/bin $config_dir/bin
 ln -s $PWD/.bash_profile_ext $HOME/.bash_profile_ext
-ln -s $PWD/starship/starship.toml $HOME/.config/starship.toml
 
 [[ ! -e $PWD/vars.env ]] && touch $PWD/vars.env
 [[ ! -e $config_dir/cred.env ]] && touch $config_dir/cred.env
