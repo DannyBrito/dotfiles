@@ -1,17 +1,90 @@
 source ${HOME}/.config/db_setup_config/alias_funcs/env_base
 
-if [[ "$OSTYPE" != "darwin"* ]]; then
-	# Case-insensitive globbing (used in pathname expansion)
-	shopt -s nocaseglob;
-	# Append to the Bash history file, rather than overwriting it
-	shopt -s histappend;
-	# Autocorrect typos in path names when using `cd`
-	shopt -s cdspell;
-fi
+# Function to enable case-insensitive globbing
+enable_nocaseglob() {
+    if [ -n "$BASH_VERSION" ]; then
+        shopt -s nocaseglob
+    elif [ -n "$ZSH_VERSION" ]; then
+        setopt nocaseglob
+    fi
+}
+
+# Function to append to the history file
+enable_histappend() {
+    if [ -n "$BASH_VERSION" ]; then
+        shopt -s histappend
+    elif [ -n "$ZSH_VERSION" ]; then
+        HISTFILE=~/.zsh_history
+        HISTSIZE=10000
+        SAVEHIST=10000
+        setopt APPEND_HISTORY
+        setopt INC_APPEND_HISTORY
+    fi
+}
+
+# Function to autocorrect typos in path names when using `cd`
+enable_cdspell() {
+    if [ -n "$BASH_VERSION" ]; then
+        shopt -s cdspell
+    elif [ -n "$ZSH_VERSION" ]; then
+        setopt CORRECT
+        setopt CORRECT_ALL
+    fi
+}
+
+# Function to enable case-insensitive completion
+enable_completion_ignore_case() {
+    if [ -n "$BASH_VERSION" ]; then
+        bind 'set completion-ignore-case on'
+    elif [ -n "$ZSH_VERSION" ]; then
+        zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+    fi
+}
+
+# Function to enable Bash 4 features
+enable_bash4_features() {
+    if [ -n "$BASH_VERSION" ]; then
+        for option in autocd globstar; do
+            shopt -s "$option" 2> /dev/null
+        done
+    elif [ -n "$ZSH_VERSION" ]; then
+        setopt autocd
+        setopt extended_glob
+    fi
+}
+
+# Function to add tab completion for many commands
+enable_bash_completion() {
+    if [ -n "$BASH_VERSION" ]; then
+        if which brew &> /dev/null && [ -r "$(brew --prefix)/etc/profile.d/bash_completion.sh" ]; then
+            export BASH_COMPLETION_COMPAT_DIR="$(brew --prefix)/etc/bash_completion.d"
+            source "$(brew --prefix)/etc/profile.d/bash_completion.sh"
+        elif [ -f /etc/bash_completion ]; then
+            source /etc/bash_completion
+        fi
+    elif [ -n "$ZSH_VERSION" ]; then
+        if which brew &> /dev/null && [ -r "$(brew --prefix)/share/zsh/site-functions" ]; then
+            fpath=($(brew --prefix)/share/zsh/site-functions $fpath)
+            autoload -Uz compinit && compinit
+        fi
+    fi
+}
+
+# Enable all features
+enable_nocaseglob
+enable_histappend
+enable_cdspell
+enable_completion_ignore_case
+enable_bash4_features
+enable_bash_completion
 
 for file in $alias_funcs_dir/{bash,docker,az-cli,installs,tailscale,git,extra,github-cli}; do
 	[ -r "$file" ] && [ -f "$file" ] && source "$file";
 done
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+	[ -r "$file" ] && [ -f "$file" ] && source "$alias_funcs_dir/osx";
+fi
 
 if [[ $TERM_PROGRAM == "Apple_Terminal" ]]; then
 	export STARSHIP_CONFIG="${HOME}/.config/starship.no-font.toml"
