@@ -3,59 +3,17 @@ alias cd-dev="cd ${dev_dir}"
 alias cd-config="cd ${config_dir}"
 alias cd-dotfiles="cd ${_dotfiles_dir}"
 
+# Navigate up directories
 alias ..="cd .."
 alias ...="cd ../.."
 alias ....="cd ../../.."
 alias .....="cd ../../../.."
 alias -- -="cd -"
 
-# Print each PATH entry on a separate line
-alias path='echo -e ${PATH//:/\\n}'
-
-alias grep='grep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias egrep='egrep --color=auto'
-
-# Flush Directory Service cache
-alias flush="dscacheutil -flushcache && killall -HUP mDNSResponder"
-
-alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
-
-# Enable aliases to be sudo’ed
-alias sudo='sudo '
-
-# Empty the Trash on all mounted volumes and the main HDD.
-# Also, clear Apple’s System Logs to improve shell startup speed.
-# Finally, clear download history from quarantine. https://mths.be/bum
-alias emptytrash="sudo rm -rfv /Volumes/*/.Trashes; sudo rm -rfv ~/.Trash; sudo rm -rfv /private/var/log/asl/*.asl; sqlite3 ~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV* 'delete from LSQuarantineEvent'"
-
-# Case-insensitive globbing (used in pathname expansion)
-shopt -s nocaseglob;
-
-# Append to the Bash history file, rather than overwriting it
-shopt -s histappend;
-
-# Autocorrect typos in path names when using `cd`
-shopt -s cdspell;
-
-bind -s 'set completion-ignore-case on'
-
-# Enable some Bash 4 features when possible:
-# * `autocd`, e.g. `**/qux` will enter `./foo/bar/baz/qux`
-# * Recursive globbing, e.g. `echo **/*.txt`
-for option in autocd globstar; do
-	shopt -s "$option" 2> /dev/null;
-done;
-
-# Add tab completion for many Bash commands
-if which brew &> /dev/null && [ -r "$(brew --prefix)/etc/profile.d/bash_completion.sh" ]; then
-	# Ensure existing Homebrew v1 completions continue to work
-	export BASH_COMPLETION_COMPAT_DIR="$(brew --prefix)/etc/bash_completion.d";
-	source "$(brew --prefix)/etc/profile.d/bash_completion.sh";
-elif [ -f /etc/bash_completion ]; then
-	source /etc/bash_completion;
-fi;
-
+# programs/binaries aliases
+alias g="git"
+alias k="kubectl"
+alias d="docker"
 
 # code quick open
 alias ecalias="code ${alias_funcs_dir}/bash"
@@ -63,11 +21,29 @@ alias ecgit="code ${alias_funcs_dir}/git"
 alias ecbashrc="code ${HOME}/.bashrc"
 alias eczshrc="code ${HOME}/.zshrc"
 
-alias g="git"
-alias k="kubectl"
-alias d="docker"
+# Print each PATH entry on a separate line
+alias path='echo -e ${PATH//:/\\n}'
+
+# Grep with color
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+# Flush Directory Service cache
+alias flush="dscacheutil -flushcache && killall -HUP mDNSResponder"
+
+# Cleanup .DS_Store files
+alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
+
+# Empty the Trash on all mounted volumes and the main HDD.
+# Also, clear Apple’s System Logs to improve shell startup speed.
+# Finally, clear download history from quarantine. https://mths.be/bum
+alias emptytrash="sudo rm -rfv /Volumes/*/.Trashes; sudo rm -rfv ~/.Trash; sudo rm -rfv /private/var/log/asl/*.asl; sqlite3 ~/Library/Preferences/com.apple.LaunchServices.QuarantineEventsV* 'delete from LSQuarantineEvent'"
 
 alias cc="clear"
+
+# Enable aliases to be sudo'ed
+alias sudo='sudo '
 
 function git-cred(){
     if [[ -e "${config_dir}/cred.env" ]]; then
@@ -101,14 +77,6 @@ function bat_fallback() {
 }
 
 alias bat='bat_fallback'
-
-# setup autocompletion
-# complete -o default -F __start_kubectl k
-
-if [ -f "/usr/share/bash-completion/completions/git" ]; then
-    source /usr/share/bash-completion/completions/git
-    __git_complete g __git_main
-fi
 
 # functions
 function lsa(){
