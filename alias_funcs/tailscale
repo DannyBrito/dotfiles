@@ -1,3 +1,5 @@
+#!/bin/sh
+
 function tail-send(){
     local target="$(tailscale status | fzf | awk '{print $2}')"
     echo "Runnig: sudo tailscale file cp $@ $target:"

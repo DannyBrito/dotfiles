@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "alias_funcs/*": "shellscript",
+        "alias_funcs/.gitignore": "ignore",
+        "alias_funcs/gitignore": "ignore"
+    }
+}

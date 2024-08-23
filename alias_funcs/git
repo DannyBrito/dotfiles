@@ -1,3 +1,4 @@
+#!/bin/sh
 
 function gri (){
     echo "Runnig: git rebase -i HEAD~$1"

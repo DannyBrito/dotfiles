@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # Remove all Docker containers
 function dcnuke() {
     echo "Running: docker rm --force $(docker ps -aq)"

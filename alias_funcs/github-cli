@@ -1,3 +1,5 @@
+#!/bin/sh
+
 function git-download-artifacts(){
     local run_id="$(echo "$1" | grep -oP '(?<=runs/)\d+')"
     local outdir="${2}"

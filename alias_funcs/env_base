@@ -1,3 +1,5 @@
+#!/bin/sh
+
 export config_dir="${HOME}/.config/db_setup_config"
 export alias_funcs_dir="${config_dir}/alias_funcs"
 

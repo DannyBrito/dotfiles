@@ -1,3 +1,5 @@
+#!/bin/sh
+
 function install-oras(){
     local version="${1:-0.15.0}"
     echo "Installing ORAS: v${version}"
