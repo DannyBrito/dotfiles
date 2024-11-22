@@ -18,8 +18,8 @@ alias k="kubectl"
 alias d="docker"
 
 # code quick open
-alias ecalias="code ${alias_funcs_dir}/bash"
-alias ecgit="code ${alias_funcs_dir}/git"
+alias ecalias="code ${alias_scripts_dir}/bash"
+alias ecgit="code ${alias_scripts_dir}/git"
 alias ecbashrc="code ${HOME}/.bashrc"
 alias eczshrc="code ${HOME}/.zshrc"
 

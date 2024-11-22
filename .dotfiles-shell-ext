@@ -1,4 +1,4 @@
-source ${HOME}/.config/db_setup_config/alias_funcs/env_base
+source ${HOME}/.config/db_setup_config/functions/env_setup.sh
 
 if [[ "$OSTYPE" != "darwin"* ]]; then
 	# Case-insensitive globbing (used in pathname expansion)
@@ -35,7 +35,11 @@ if [ -f "/usr/share/bash-completion/completions/git" ]; then
     __git_complete g __git_main
 fi
 
-for file in $alias_funcs_dir/{bash,docker,az-cli,installs,tailscale,git,extra,github-cli}; do
+for file in $alias_scripts_dir/*; do
+	[ -r "$file" ] && [ -f "$file" ] && source "$file";
+done
+
+for file in $alias_scripts_dir/extra/*; do
 	[ -r "$file" ] && [ -f "$file" ] && source "$file";
 done
 
