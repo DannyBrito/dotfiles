@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "alias_funcs/*": "shellscript",
+        "functions/scripts/extra/*": "shellscript",
+        "functions/scripts/*": "shellscript",
         "alias_funcs/.gitignore": "ignore",
         "alias_funcs/gitignore": "ignore"
     }
