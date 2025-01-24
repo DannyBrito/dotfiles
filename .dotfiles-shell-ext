@@ -1,0 +1,49 @@
+source ${HOME}/.config/db_setup_config/functions/env_setup.sh
+
+if [[ "$OSTYPE" != "darwin"* ]]; then
+	# Case-insensitive globbing (used in pathname expansion)
+	shopt -s nocaseglob;
+	# Append to the Bash history file, rather than overwriting it
+	shopt -s histappend;
+	# Autocorrect typos in path names when using `cd`
+	shopt -s cdspell;
+	bind -s 'set completion-ignore-case on'
+fi
+
+# Enable some Bash 4 features when possible:
+# * `autocd`, e.g. `**/qux` will enter `./foo/bar/baz/qux`
+# * Recursive globbing, e.g. `echo **/*.txt`
+for option in autocd globstar; do
+	shopt -s "$option" 2> /dev/null;
+done;
+
+# Add tab completion for many Bash commands
+if which brew &> /dev/null && [ -r "$(brew --prefix)/etc/profile.d/bash_completion.sh" ]; then
+	# Ensure existing Homebrew v1 completions continue to work
+	export BASH_COMPLETION_COMPAT_DIR="$(brew --prefix)/etc/bash_completion.d";
+	source "$(brew --prefix)/etc/profile.d/bash_completion.sh";
+elif [ -f /etc/bash_completion ]; then
+	source /etc/bash_completion;
+fi;
+
+# setup autocompletion
+# complete -o default -F __start_kubectl k
+
+if [ -f "/usr/share/bash-completion/completions/git" ]; then
+    source /usr/share/bash-completion/completions/git
+    __git_complete g __git_main
+fi
+
+for file in $alias_scripts_dir/*; do
+	[ -r "$file" ] && [ -f "$file" ] && source "$file";
+done
+
+for file in $alias_scripts_dir/extra/*; do
+	[ -r "$file" ] && [ -f "$file" ] && source "$file";
+done
+
+if [[ $TERM_PROGRAM == "Apple_Terminal" ]]; then
+	export STARSHIP_CONFIG="${HOME}/.config/starship.no-font.toml"
+fi
+
+unset file;

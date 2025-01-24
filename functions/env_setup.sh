@@ -1,7 +1,10 @@
-export config_dir="${HOME}/.config/db_setup_config"
-export alias_funcs_dir="${config_dir}/alias_funcs"
+#!/bin/sh
 
-#these variables can be overwriten on the vars.env file
+export config_dir="${HOME}/.config/db_setup_config"
+export functions_dir="${config_dir}/functions"
+export alias_scripts_dir="${functions_dir}/scripts"
+
+# These variables can be overwriten on the vars.env file
 export dev_dir="/mount/d/dev"
 export _dotfiles_dir="${dev_dir}/danny-gh/dotfiles"
 

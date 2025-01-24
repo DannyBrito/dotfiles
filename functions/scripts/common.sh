@@ -1,22 +1,42 @@
+#!/bin/sh
+
 # cd-directories
 alias cd-dev="cd ${dev_dir}"
 alias cd-config="cd ${config_dir}"
 alias cd-dotfiles="cd ${_dotfiles_dir}"
 
+# Navigate up directories
 alias ..="cd .."
 alias ...="cd ../.."
+alias ....="cd ../../.."
+alias .....="cd ../../../.."
+alias -- -="cd -"
 
-# code quick open
-alias ecalias="code ${alias_funcs_dir}/bash"
-alias ecgit="code ${alias_funcs_dir}/git"
-alias ecbashrc="code ${HOME}/.bashrc"
-alias eczshrc="code ${HOME}/.zshrc"
-
+# programs/binaries aliases
 alias g="git"
 alias k="kubectl"
 alias d="docker"
 
+# code quick open
+alias ecalias="code ${alias_scripts_dir}/bash"
+alias ecgit="code ${alias_scripts_dir}/git"
+alias ecbashrc="code ${HOME}/.bashrc"
+alias eczshrc="code ${HOME}/.zshrc"
+
+# Print each PATH entry on a separate line
+alias path='echo -e ${PATH//:/\\n}'
+
+# Grep with color
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+# Cleanup .DS_Store files
+alias cleanup_ds="find . -type f -name '*.DS_Store' -ls -delete"
 alias cc="clear"
+
+# Enable aliases to be sudo'ed
+alias sudo='sudo '
 
 function git-cred(){
     if [[ -e "${config_dir}/cred.env" ]]; then
@@ -50,14 +70,6 @@ function bat_fallback() {
 }
 
 alias bat='bat_fallback'
-
-# setup autocompletion
-# complete -o default -F __start_kubectl k
-
-if [ -f "/usr/share/bash-completion/completions/git" ]; then
-    source /usr/share/bash-completion/completions/git
-    __git_complete g __git_main
-fi
 
 # functions
 function lsa(){

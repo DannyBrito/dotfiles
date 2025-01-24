@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # AZ CLI
 function az-login(){
     echo "Running: az login --use-device-code"

@@ -1,10 +1,10 @@
 set -e
 
 echo "installing starship:"
-$PWD/starship/install.sh
+$PWD/tools/starship/install.sh
 
 echo "installing fzf:"
-$PWD/fzf/install.sh
+$PWD/tools/fzf/install.sh
 
 echo "installing bcat:"
-$PWD/bcat/install.sh
+$PWD/tools/bcat/install.sh

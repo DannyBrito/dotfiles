@@ -1,3 +1,4 @@
+#!/bin/sh
 
 function gri (){
     echo "Runnig: git rebase -i HEAD~$1"
@@ -17,6 +18,11 @@ function git-code-editor(){
 function glo (){
     echo "Runnig: git log --oneline"
     git log --oneline
+}
+
+function glon (){
+    echo "Runnig: git log --oneline --color | nl -v 1 | less -R"
+    git log --oneline --color | nl -v 1 | less -R
 }
 
 function glg (){
@@ -143,18 +149,21 @@ function gamendall(){
 }
 
 function git-shit(){
-    echo "Running: git reset --soft HEAD~1"
-    git reset --soft HEAD~1
+    local head="${1:-1}"
+    echo "Running: git reset --soft HEAD~$head"
+    git reset --soft HEAD~$head
 }
 
 function git-wipe(){
-    echo "Running: git reset --mixed HEAD~1"
-    git reset --mixed HEAD~1
+    local head="${1:-1}"
+    echo "Running: git reset --mixed HEAD~$head"
+    git reset --mixed HEAD~$head
 }
 
 function git-nuke(){
-    echo "Running: git reset --hard HEAD~1"
-    git reset --hard HEAD~1
+    local head="${1:-1}"
+    echo "Running: git reset --hard HEAD~$head"
+    git reset --hard HEAD~$head
 }
 
 function gbf(){
