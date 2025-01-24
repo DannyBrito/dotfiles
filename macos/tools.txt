@@ -1,0 +1,5 @@
+tree
+wget
+curl
+jq
+yq
