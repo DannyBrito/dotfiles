@@ -46,6 +46,15 @@ function git-cred(){
     fi
 }
 
+function src-envfile(){
+    local file="${1:-.env}"
+    if [[ ! -e $file ]]; then
+        echo "file not found: $file"
+        return 1
+    fi
+    export $(awk -F= '/^[^#]/ {split($2, a, " #"); print $1"="a[1]}' $file)
+}
+
 function git-new-cred(){
     if [[ -e "${config_dir}/new_cred.env" ]]; then
         export $(xargs <${config_dir}/new_cred.env)
