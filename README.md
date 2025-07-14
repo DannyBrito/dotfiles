@@ -1,4 +1,4 @@
-# .dotfiles
+# 🔧 dotfiles
 
 This repo contains all the aliases and functions I use on my machines.
 

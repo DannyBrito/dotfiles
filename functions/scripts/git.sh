@@ -1,7 +1,7 @@
 #!/bin/sh
 
 function gri (){
-    echo "Runnig: git rebase -i HEAD~$1"
+    echo "Running: git rebase -i HEAD~$1"
     git rebase -i HEAD~$1
 }
 
@@ -16,17 +16,17 @@ function git-code-editor(){
 }
 
 function glo (){
-    echo "Runnig: git log --oneline"
+    echo "Running: git log --oneline"
     git log --oneline
 }
 
 function glon (){
-    echo "Runnig: git log --oneline --color | nl -v 1 | less -R"
-    git log --oneline --color | nl -v 1 | less -R
+    echo "Running: git log --oneline --color | nl -v 1 | less -R"
+    git log --oneline --color | nl -v 1 | less -FXR
 }
 
 function glg (){
-    echo "Runnig: git log --graph"
+    echo "Running: git log --graph"
     git log --graph
 }
 
@@ -135,8 +135,8 @@ function gco(){
 function gamend(){
     local msg="$1"
     if [ ! -z "$msg" ]; then
-        echo "Running: git commit --amend -m '$mgs'"
-        git commit --amend -m "$mgs"
+        echo "Running: git commit --amend -m '$msg'"
+        git commit --amend -m "$msg"
     else
         echo "Running: git commit --amend --no-edit"
         git commit --amend --no-edit
