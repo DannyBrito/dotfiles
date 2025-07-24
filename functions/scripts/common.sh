@@ -46,6 +46,20 @@ function git-cred(){
     fi
 }
 
+function disk-usage(){
+    local params="$@"
+    if [[ -z $params ]]; then
+        params="-h --max-depth=1 ."
+    fi
+    echo "Disk usage: running du $params"
+    du $params
+}
+
+function disk-usage-all(){
+    echo "Disk usage: running df -h $@"
+    df -h $@
+}
+
 function src-envfile(){
     local file="${1:-.env}"
     if [[ ! -e $file ]]; then
@@ -53,14 +67,6 @@ function src-envfile(){
         return 1
     fi
     export $(awk -F= '/^[^#]/ {split($2, a, " #"); print $1"="a[1]}' $file)
-}
-
-function git-new-cred(){
-    if [[ -e "${config_dir}/new_cred.env" ]]; then
-        export $(xargs <${config_dir}/new_cred.env)
-    else
-        echo "no new_cred.env found"
-    fi
 }
 
 function bat_fallback() {
