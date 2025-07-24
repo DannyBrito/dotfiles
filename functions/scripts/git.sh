@@ -76,8 +76,12 @@ function gfp(){
 }
 
 function gbn(){
-    echo "Running: git checkout -b $1 $2"
-    git checkout -b $1 $2
+    local branch="$1"
+    echo "Running: git checkout -b $branch $2"
+    if [[ "$branch" == *:* ]]; then
+        branch="${branch#*:}"
+    fi
+    git checkout -b $branch $2
 }
 
 function greturn(){
@@ -109,6 +113,18 @@ function gcm(){
     git commit -m "$msg"
 }
 
+function gcamnoverify(){
+    local msg=${1:-"fix"}
+    echo "Running: git commit -am '$msg' --no-verify"
+    git commit -am "$msg" --no-verify
+}
+
+function gcmnoverify(){
+    local msg=${1:-"fix"}
+    echo "Running: git commit -m '$msg' --no-verify"
+    git commit -m "$msg" --no-verify
+}
+
 function gall(){
     echo "Running: git add ."
     git add .
@@ -123,6 +139,9 @@ function gco(){
     local branch="$1"
     if [ -z "$branch" ]; then
         branch="$( git branch -l --format='%(refname:short)' | fzf)"
+    fi
+    if [[ "$branch" == *:* ]]; then
+        branch="${branch#*:}"
     fi
     if [ -z "$branch" ]; then
         echo "Cancel none picked"
