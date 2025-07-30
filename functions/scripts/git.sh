@@ -135,6 +135,11 @@ function gs(){
     git status
 }
 
+function gredo(){
+    git reset --soft HEAD~1
+    gamend
+}
+
 function gco(){
     local branch="$1"
     if [ -z "$branch" ]; then
