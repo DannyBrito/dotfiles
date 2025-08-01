@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 
 source $PWD/tools/helpers.sh
@@ -6,7 +7,8 @@ source $PWD/tools/helpers.sh
 $PWD/tools/starship/install-font.sh
 
 # Install starship
-curl -sS https://starship.rs/install.sh | sh
+mkdir -p "$HOME/.local/bin"
+curl -sS https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$HOME/.local/bin"
 
 mkdir -p $HOME/.config
 

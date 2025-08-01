@@ -10,8 +10,19 @@ get_shell_type() {
 get_startup_file_path() {
     local shell_type
     shell_type="$(get_shell_type)"
-    local rc_file="${shell_type}rc"
-    echo "$HOME/.$rc_file"
+
+    local shell_profile
+    case "$shell_type" in
+        bash) shell_profile="$HOME/.bash_profile" ;;
+        zsh)  shell_profile="$HOME/.zprofile" ;;
+        *)    shell_profile="" ;;
+    esac
+
+    if [[ -n "$shell_profile" && -f "$shell_profile" ]]; then
+        echo "$shell_profile"
+    else
+        echo "$HOME/.profile"
+    fi
 }
 
 # Check if command exists
