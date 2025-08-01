@@ -3,10 +3,10 @@ set -euo pipefail
 
 # Bootstrap script for dotfiles setup
 # shellcheck source=./tools/helpers.sh
-. "$PWD/tools/helpers.sh"
+source "$PWD/tools/helpers.sh"
 
 # shellcheck source=./tools/validate.sh
-. "$PWD/tools/validate.sh"
+source "$PWD/tools/validate.sh"
 
 main() {
     log "🚀 Starting dotfiles bootstrap process..."
@@ -56,7 +56,7 @@ main() {
             cat << EOF >> "$startup_file"
 
 # Source .profile for environment setup
-[ -f "$HOME/.profile" ] && . "$HOME/.profile"
+[ -f "$HOME/.profile" ] && source "$HOME/.profile"
 EOF
         else
             log "✅ $startup_file already sources .profile"
@@ -75,7 +75,7 @@ EOF
 DOTFILES_PROFILE_LOADED=1
 
 # start custom alias/funcs setup
-. ${HOME}/.dotfiles-shell-ext
+source ${HOME}/.dotfiles-shell-ext
 
 # adding bin directories to path
 export PATH="$HOME/.local/bin:$HOME/.fzf/bin:${config_dir}/bin:\$PATH"
@@ -84,23 +84,9 @@ EOF
         log "✅ Dotfiles configuration already exists in .profile"
     fi
 
-    # Also add to .bashrc for interactive shells (like Codespaces)
-    if ! grep -q "DOTFILES_PROFILE_LOADED" "$HOME/.bashrc" 2>/dev/null; then
-        log "➕ Adding .profile sourcing to .bashrc for interactive shells"
-        backup_file "$HOME/.bashrc"
-
-        cat << EOF >> "$HOME/.bashrc"
-
-# Source .profile for dotfiles configuration
-[ -f "$HOME/.profile" ] && . "$HOME/.profile"
-EOF
-    else
-        log "✅ .bashrc already sources .profile"
-    fi
-
     log "🎉 Bootstrap setup completed successfully!"
-    log "🔄 Loading dotfiles configuration..."
-    . "$HOME/.profile"
+    log "Loading dotfiles configuration..."
+    source "$HOME/.profile"
     log "✅ Dotfiles configuration loaded!"
 }
 
