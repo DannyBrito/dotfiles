@@ -7,7 +7,8 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
 	shopt -s histappend;
 	# Autocorrect typos in path names when using `cd`
 	shopt -s cdspell;
-	bind -s 'set completion-ignore-case on'
+	# Only set bind options in interactive shells
+	[[ $- == *i* ]] && bind -s 'set completion-ignore-case on'
 fi
 
 # Enable some Bash 4 features when possible:
@@ -42,8 +43,17 @@ for file in $alias_scripts_dir/extra/*; do
 	[ -r "$file" ] && [ -f "$file" ] && source "$file";
 done
 
-if [[ $TERM_PROGRAM == "Apple_Terminal" ]]; then
+if [[ ${TERM_PROGRAM:-} == "Apple_Terminal" ]]; then
 	export STARSHIP_CONFIG="${HOME}/.config/starship.no-font.toml"
+fi
+
+# Setup fzf key bindings and fuzzy completion (only in interactive shells)
+if [[ $- == *i* ]] && [[ -f ~/.fzf/shell/key-bindings.bash ]]; then
+	source ~/.fzf/shell/key-bindings.bash
+fi
+
+if [[ -f ~/.fzf/shell/completion.bash ]]; then
+	source ~/.fzf/shell/completion.bash
 fi
 
 unset file;

@@ -1,10 +1,11 @@
-
+#!/bin/bash
 set -e
 # Source: https://github.com/sharkdp/bat
 
+# Check if bat is already installed
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Linux
-    sudo apt install -y bat
+    sudo apt-get install -y bat
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     # Mac OSX
     brew install bat

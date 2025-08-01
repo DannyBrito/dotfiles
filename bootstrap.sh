@@ -77,8 +77,8 @@ DOTFILES_PROFILE_LOADED=1
 # start custom alias/funcs setup
 source ${HOME}/.dotfiles-shell-ext
 
-# adding bin to path
-export PATH="${config_dir}/bin:\$PATH"
+# adding bin directories to path
+export PATH="$HOME/.local/bin:$HOME/.fzf/bin:${config_dir}/bin:\$PATH"
 EOF
     else
         log "✅ Dotfiles configuration already exists in .profile"
