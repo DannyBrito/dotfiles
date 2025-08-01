@@ -91,22 +91,22 @@ EOF
         log "✅ Dotfiles configuration already exists in .profile"
     fi
 
-#     # Also add to .bashrc for interactive shells (like Codespaces)
-#     # Check if we're in Codespaces environment
-#     if [[ -n "${CODESPACES:-}" ]]; then
-#         log "🔍 Detected Codespaces environment"
-#         if ! grep -q "\.profile" "$HOME/.bashrc" 2>/dev/null; then
-#             log "➕ Adding .profile sourcing to .bashrc for Codespaces"
-#             backup_file "$HOME/.bashrc"
-#             cat << EOF >> "$HOME/.bashrc"
+    # Also add to .bashrc for interactive shells (like Codespaces)
+    # Check if we're in Codespaces environment
+    if [[ -n "${CODESPACES:-}" ]]; then
+        log "🔍 Detected Codespaces environment"
+        if ! grep -q "\.profile" "$HOME/.bashrc" 2>/dev/null; then
+            log "➕ Adding .profile sourcing to .bashrc for Codespaces"
+            backup_file "$HOME/.bashrc"
+            cat << EOF >> "$HOME/.bashrc"
 
-# # Source .profile for dotfiles configuration (Codespaces)
-# [ -f "$HOME/.profile" ] && . "$HOME/.profile"
-# EOF
-#         else
-#             log "✅ .bashrc already sources .profile"
-#         fi
-#     fi
+# Source .profile for dotfiles configuration (Codespaces)
+[ -f "$HOME/.profile" ] && . "$HOME/.profile"
+EOF
+        else
+            log "✅ .bashrc already sources .profile"
+        fi
+    fi
     log "🎉 Bootstrap setup completed successfully!"
     log "Please start a new terminal session or run: . ~/.profile"
 }
