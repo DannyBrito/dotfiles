@@ -62,15 +62,18 @@ EOF
         fi
     fi
 
-    # Add our dotfiles configuration to .profile with guard
+    # Add our dotfiles configuration to .profile with guard (at the top to avoid conflicts)
     if ! grep -q "DOTFILES_PROFILE_LOADED" "$HOME/.profile"; then
         log "➕ Adding dotfiles configuration to .profile"
         backup_file "$HOME/.profile"
 
-        cat << EOF >> "$HOME/.profile"
-
+        # Create a temporary file with our config at the top
+        local temp_profile=$(mktemp)
+        cat << EOF > "$temp_profile"
 # Prevent multiple sourcing
-[ -n "\${DOTFILES_PROFILE_LOADED:-}" ] && return
+if [ -n "\${DOTFILES_PROFILE_LOADED:-}" ]; then
+    return 2>/dev/null || true
+fi
 DOTFILES_PROFILE_LOADED=1
 
 # start custom alias/funcs setup
@@ -78,27 +81,32 @@ DOTFILES_PROFILE_LOADED=1
 
 # adding bin directories to path
 export PATH="$HOME/.local/bin:$HOME/.fzf/bin:${config_dir}/bin:\$PATH"
+
 EOF
+        # Append existing .profile content if it exists
+        [[ -f "$HOME/.profile" ]] && cat "$HOME/.profile" >> "$temp_profile"
+        # Replace .profile with our new content
+        mv "$temp_profile" "$HOME/.profile"
     else
         log "✅ Dotfiles configuration already exists in .profile"
     fi
 
-    # Also add to .bashrc for interactive shells (like Codespaces)
-    # Check if we're in Codespaces environment
-    if [[ -n "${CODESPACES:-}" ]]; then
-        log "🔍 Detected Codespaces environment"
-        if ! grep -q "\.profile" "$HOME/.bashrc" 2>/dev/null; then
-            log "➕ Adding .profile sourcing to .bashrc for Codespaces"
-            backup_file "$HOME/.bashrc"
-            cat << EOF >> "$HOME/.bashrc"
+#     # Also add to .bashrc for interactive shells (like Codespaces)
+#     # Check if we're in Codespaces environment
+#     if [[ -n "${CODESPACES:-}" ]]; then
+#         log "🔍 Detected Codespaces environment"
+#         if ! grep -q "\.profile" "$HOME/.bashrc" 2>/dev/null; then
+#             log "➕ Adding .profile sourcing to .bashrc for Codespaces"
+#             backup_file "$HOME/.bashrc"
+#             cat << EOF >> "$HOME/.bashrc"
 
-# Source .profile for dotfiles configuration (Codespaces)
-[ -f "$HOME/.profile" ] && . "$HOME/.profile"
-EOF
-        else
-            log "✅ .bashrc already sources .profile"
-        fi
-    fi
+# # Source .profile for dotfiles configuration (Codespaces)
+# [ -f "$HOME/.profile" ] && . "$HOME/.profile"
+# EOF
+#         else
+#             log "✅ .bashrc already sources .profile"
+#         fi
+#     fi
     log "🎉 Bootstrap setup completed successfully!"
     log "Please start a new terminal session or run: . ~/.profile"
 }
