@@ -4,6 +4,7 @@ format = """
 [](color_green)\
 $os\
 $username\
+$hostname\
 [](bg:color_blue fg:color_green)\
 $directory\
 [](fg:color_blue bg:color_purple)\
@@ -47,6 +48,11 @@ CentOS = ""
 Debian = "󰣚"
 Redhat = "󱄛"
 RedHatEnterprise = "󱄛"
+
+[hostname]
+ssh_only = true
+style = "bg:color_green fg:color_fg0"
+format = '[- $hostname ]($style)'
 
 [username]
 show_always = true
