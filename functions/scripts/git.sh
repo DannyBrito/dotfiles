@@ -101,28 +101,54 @@ function gcod(){
     git checkout $main_branch
 }
 
+# Toggle signoff for this repository
+function git-toggle-signoff(){
+    local current=$(git config --local --get commit.signoff 2>/dev/null)
+    if [[ "$current" == "true" ]]; then
+        git config --local --unset commit.signoff
+        echo "✗ Signoff (DCO) DISABLED for this repo"
+    else
+        git config --local commit.signoff true
+        echo "✓ Signoff (DCO) ENABLED for this repo"
+    fi
+}
+
+# Helper to check if signoff is enabled
+function _git_should_signoff(){
+    local signoff=$(git config --get commit.signoff 2>/dev/null)
+    if [[ "$signoff" == "true" ]]; then
+        echo "--signoff"
+    else
+        echo ""
+    fi
+}
+
 function gcam(){
     local msg=${1:-"fix"}
-    echo "Running: git commit -am '$msg' "
-    git commit -am "$msg"
+    local signoff_flag="$(_git_should_signoff)"
+    echo "Running: git commit -am '$msg' $signoff_flag"
+    git commit -am "$msg" $signoff_flag
 }
 
 function gcm(){
     local msg=${1:-"fix"}
-    echo "Running: git commit -m '$msg' "
-    git commit -m "$msg"
+    local signoff_flag="$(_git_should_signoff)"
+    echo "Running: git commit -m '$msg' $signoff_flag"
+    git commit -m "$msg" $signoff_flag
 }
 
 function gcamnoverify(){
     local msg=${1:-"fix"}
-    echo "Running: git commit -am '$msg' --no-verify"
-    git commit -am "$msg" --no-verify
+    local signoff_flag="$(_git_should_signoff)"
+    echo "Running: git commit -am '$msg' --no-verify $signoff_flag"
+    git commit -am "$msg" --no-verify $signoff_flag
 }
 
 function gcmnoverify(){
     local msg=${1:-"fix"}
-    echo "Running: git commit -m '$msg' --no-verify"
-    git commit -m "$msg" --no-verify
+    local signoff_flag="$(_git_should_signoff)"
+    echo "Running: git commit -m '$msg' --no-verify $signoff_flag"
+    git commit -m "$msg" --no-verify $signoff_flag
 }
 
 function gall(){
@@ -158,18 +184,36 @@ function gco(){
 
 function gamend(){
     local msg="$1"
+    local signoff_flag="$(_git_should_signoff)"
     if [ ! -z "$msg" ]; then
-        echo "Running: git commit --amend -m '$msg'"
-        git commit --amend -m "$msg"
+        echo "Running: git commit --amend -m '$msg' $signoff_flag"
+        git commit --amend -m "$msg" $signoff_flag
     else
-        echo "Running: git commit --amend --no-edit"
-        git commit --amend --no-edit
+        echo "Running: git commit --amend --no-edit $signoff_flag"
+        git commit --amend --no-edit $signoff_flag
+    fi
+}
+
+function gamendnoverify(){
+    local msg="$1"
+    local signoff_flag="$(_git_should_signoff)"
+    if [ ! -z "$msg" ]; then
+        echo "Running: git commit --amend -m '$msg' --no-verify $signoff_flag"
+        git commit --amend -m "$msg" --no-verify $signoff_flag
+    else
+        echo "Running: git commit --amend --no-edit --no-verify $signoff_flag"
+        git commit --amend --no-edit --no-verify $signoff_flag
     fi
 }
 
 function gamendall(){
     gall
     gamend "$1"
+}
+
+function gamendallnoverify(){
+    gall
+    gamendnoverify "$1"
 }
 
 function git-shit(){
@@ -188,6 +232,11 @@ function git-nuke(){
     local head="${1:-1}"
     echo "Running: git reset --hard HEAD~$head"
     git reset --hard HEAD~$head
+}
+
+function git-clean(){
+    echo "Running: git reset --hard HEAD && git clean -fd"
+    git reset --hard HEAD && git clean -fd
 }
 
 function gbf(){
