@@ -120,3 +120,31 @@ function server() {
     # And serve everything as UTF-8 (although not technically correct, this doesn’t break anything for binary files)
     python3 -c $'import http.server;\nmap = http.server.SimpleHTTPRequestHandler.extensions_map;\nmap[""] = "text/plain";\nfor key, value in map.items():\n\tmap[key] = value + ";charset=UTF-8";\nhttp.server.test(HandlerClass=http.server.SimpleHTTPRequestHandler, port=int('$port'))'
 }
+
+function tar-extract() {
+    local file="${1:-src.tar.gz}"
+    local dest="${2:-.}"
+    if [[ ! -e "$file" ]]; then
+        echo "file not found: $file"
+        return 1
+    fi
+    # Check if destination exists, create if not
+    if [[ ! -d "$dest" ]]; then
+        echo "Destination '$dest' does not exist. Creating..."
+        mkdir -p "$dest"
+    fi
+    echo "Extracting tar file: $file to $dest"
+    # Detect if file is gzipped
+    if [[ "$file" == *.tar.gz || "$file" == *.tgz ]]; then
+        tar -xzf "$file" -C "$dest"
+    else
+        tar -xf "$file" -C "$dest"
+    fi
+}
+
+function tar-create() {
+    local src="${1:-.}"
+    local dest="${2:-archive.tar.gz}"
+    echo "Creating tar.gz file: $dest from $src"
+    tar -czf "$dest" -C "$(dirname "$src")" "$(basename "$src")"
+}
