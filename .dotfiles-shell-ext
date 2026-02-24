@@ -9,6 +9,12 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
 	shopt -s cdspell;
 	# Only set bind options in interactive shells
 	[[ $- == *i* ]] && bind -s 'set completion-ignore-case on'
+else
+	# Enable Zsh completion system
+	autoload -Uz compinit && compinit
+	# Enable Bash completion compatibility (defines the 'complete' command)
+	autoload -Uz bashcompinit && bashcompinit
+	alias bind="bindkey"
 fi
 
 # Enable some Bash 4 features when possible:
@@ -48,12 +54,12 @@ if [[ ${TERM_PROGRAM:-} == "Apple_Terminal" ]]; then
 fi
 
 # Setup fzf key bindings and fuzzy completion (only in interactive shells)
-if [[ $- == *i* ]] && [[ -f ~/.fzf/shell/key-bindings.bash ]]; then
-	source ~/.fzf/shell/key-bindings.bash
-fi
+# if [[ $- == *i* ]] && [[ -f ~/.fzf/shell/key-bindings.bash ]]; then
+# 	source ~/.fzf/shell/key-bindings.bash
+# fi
 
-if [[ -f ~/.fzf/shell/completion.bash ]]; then
-	source ~/.fzf/shell/completion.bash
-fi
+# if [[ -f ~/.fzf/shell/completion.bash ]]; then
+# 	source ~/.fzf/shell/completion.bash
+# fi
 
 unset file;
