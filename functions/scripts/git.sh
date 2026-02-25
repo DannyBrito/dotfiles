@@ -123,6 +123,21 @@ function _git_should_signoff(){
     fi
 }
 
+function git-useconfig(){
+    git config --global user.useconfigonly "true"
+}
+
+function git-enable-signing-local(){
+    if [ -n "${1}" ] && [[ "${1}" == *".pub" ]] && [ ! -f "${1}" ]; then
+        echo "Error: Signing key file '${1}' does not exist."
+        return 1
+    fi
+    echo "Enabling GPG commit signing locally with key: ${1}"
+    git config --local gpg.format ssh
+    git config --local user.signingkey ${1}
+    git config --local commit.gpgsign true
+}
+
 function gcam(){
     local msg=${1:-"fix"}
     local signoff_flag="$(_git_should_signoff)"
