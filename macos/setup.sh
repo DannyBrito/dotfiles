@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
 # ~/.macos — https://mths.be/macos
+# Updated for modern macOS (Ventura+)
 
-# Close any open System Preferences panes, to prevent them from overriding
-# settings we’re about to change
-osascript -e 'tell application "System Preferences" to quit'
+# Close any open System Settings/Preferences panes, to prevent them from overriding
+# settings we're about to change
+osascript -e 'tell application "System Settings" to quit' 2>/dev/null
+osascript -e 'tell application "System Preferences" to quit' 2>/dev/null
 
 # Ask for the administrator password upfront
 sudo -v
@@ -45,19 +47,21 @@ defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightC
 defaults -currentHost write NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior -int 1
 defaults -currentHost write NSGlobalDomain com.apple.trackpad.enableSecondaryClick -bool true
 
-# Stop iTunes from responding to the keyboard media keys
-launchctl unload -w /System/Library/LaunchAgents/com.apple.rcd.plist 2> /dev/null
+# Stop Music app from responding to the keyboard media keys (was iTunes)
+# Note: This may not work on newer macOS versions with SIP enabled
+launchctl unload -w /System/Library/LaunchAgents/com.apple.rcd.plist 2>/dev/null || true
 
 ###############################################################################
 # Energy saving                                                               #
 ###############################################################################
 
 # Remove the sleep image file to save disk space
-sudo rm /private/var/vm/sleepimage
-# Create a zero-byte file instead…
-sudo touch /private/var/vm/sleepimage
-# …and make sure it can’t be rewritten
-sudo chflags uchg /private/var/vm/sleepimage
+# Note: This may fail on modern macOS with SIP enabled - wrapped in conditional
+if [ -f /private/var/vm/sleepimage ] && [ -w /private/var/vm/ ]; then
+    sudo rm -f /private/var/vm/sleepimage 2>/dev/null
+    sudo touch /private/var/vm/sleepimage 2>/dev/null
+    sudo chflags uchg /private/var/vm/sleepimage 2>/dev/null
+fi
 
 ###############################################################################
 # Screen                                                                      #
@@ -123,7 +127,8 @@ defaults write com.apple.finder WarnOnEmptyTrash -bool false
 defaults write com.apple.NetworkBrowser BrowseAllInterfaces -bool true
 
 # Show the ~/Library folder
-chflags nohidden ~/Library && xattr -d com.apple.FinderInfo ~/Library
+chflags nohidden ~/Library 2>/dev/null
+xattr -d com.apple.FinderInfo ~/Library 2>/dev/null || true
 
 # Show the /Volumes folder
 sudo chflags nohidden /Volumes
@@ -136,7 +141,7 @@ defaults write com.apple.finder FXInfoPanesExpanded -dict \
 	Privileges -bool true
 
 ###############################################################################
-# Dock, Dashboard, and hot corners                                            #
+# Dock and hot corners                                                        #
 ###############################################################################
 
 # Enable highlight hover effect for the grid view of a stack (Dock)
@@ -183,7 +188,6 @@ defaults write com.apple.dock show-recents -bool false
 #  4: Desktop
 #  5: Start screen saver
 #  6: Disable screen saver
-#  7: Dashboard
 # 10: Put display to sleep
 # 11: Launchpad
 # 12: Notification Center
@@ -229,13 +233,8 @@ defaults write com.googlecode.iterm2 PromptOnQuit -bool false
 # Kill affected applications                                                  #
 ###############################################################################
 
-for app in "Activity Monitor" \
-	"cfprefsd" \
-	"Dock" \
-	"Finder" \
-	"Safari" \
-	"SystemUIServer" \
-	"Terminal" \
-	killall "${app}" &> /dev/null
+for app in "Activity Monitor" "cfprefsd" "Dock" "Finder" "Safari" "SystemUIServer" "Terminal"; do
+    killall "${app}" 2>/dev/null || true
 done
+
 echo "Done. Note that some of these changes require a logout/restart to take effect."
