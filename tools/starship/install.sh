@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
-source $PWD/tools/helpers.sh
+. $PWD/tools/helpers.sh
 
 # Install font:
 $PWD/tools/starship/install-font.sh

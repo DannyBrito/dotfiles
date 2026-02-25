@@ -1,65 +1,95 @@
-source ${HOME}/.config/db_setup_config/functions/env_setup.sh
+. ${HOME}/.config/db_setup_config/functions/env_setup.sh
 
-if [[ "$OSTYPE" != "darwin"* ]]; then
-	# Case-insensitive globbing (used in pathname expansion)
-	shopt -s nocaseglob;
-	# Append to the Bash history file, rather than overwriting it
-	shopt -s histappend;
-	# Autocorrect typos in path names when using `cd`
-	shopt -s cdspell;
-	# Only set bind options in interactive shells
-	[[ $- == *i* ]] && bind -s 'set completion-ignore-case on'
-else
+# Shell-specific configuration (detect by shell, not by OS)
+if [ -n "$ZSH_VERSION" ]; then
+	# Zsh-specific settings
 	# Enable Zsh completion system
 	autoload -Uz compinit && compinit
 	# Enable Bash completion compatibility (defines the 'complete' command)
 	autoload -Uz bashcompinit && bashcompinit
+	# Alias bind to bindkey for compatibility with bash-style configs
 	alias bind="bindkey"
+	# Zsh equivalents of bash options
+	setopt AUTO_CD           # autocd equivalent
+	setopt GLOB_STAR_SHORT   # globstar equivalent (zsh 5.2+)
+	setopt NO_CASE_GLOB      # nocaseglob equivalent
+	setopt APPEND_HISTORY    # histappend equivalent
+	setopt CORRECT           # cdspell equivalent
+elif [ -n "$BASH_VERSION" ]; then
+	# Bash-specific settings
+	# Case-insensitive globbing (used in pathname expansion)
+	shopt -s nocaseglob 2>/dev/null
+	# Append to the Bash history file, rather than overwriting it
+	shopt -s histappend 2>/dev/null
+	# Autocorrect typos in path names when using `cd`
+	shopt -s cdspell 2>/dev/null
+	# Enable some Bash 4 features when possible:
+	# * `autocd`, e.g. `**/qux` will enter `./foo/bar/baz/qux`
+	# * Recursive globbing, e.g. `echo **/*.txt`
+	shopt -s autocd 2>/dev/null
+	shopt -s globstar 2>/dev/null
+	# Only set bind options in interactive shells
+	case "$-" in *i*) bind -s 'set completion-ignore-case on' 2>/dev/null ;; esac
 fi
 
-# Enable some Bash 4 features when possible:
-# * `autocd`, e.g. `**/qux` will enter `./foo/bar/baz/qux`
-# * Recursive globbing, e.g. `echo **/*.txt`
-for option in autocd globstar; do
-	shopt -s "$option" 2> /dev/null;
-done;
+# Add tab completion (shell-aware)
+if [ -n "$BASH_VERSION" ]; then
+	# Bash completion
+	if command -v brew &> /dev/null && [ -r "$(brew --prefix)/etc/profile.d/bash_completion.sh" ]; then
+		export BASH_COMPLETION_COMPAT_DIR="$(brew --prefix)/etc/bash_completion.d"
+		. "$(brew --prefix)/etc/profile.d/bash_completion.sh"
+	elif [ -f /etc/bash_completion ]; then
+		. /etc/bash_completion
+	fi
 
-# Add tab completion for many Bash commands
-if which brew &> /dev/null && [ -r "$(brew --prefix)/etc/profile.d/bash_completion.sh" ]; then
-	# Ensure existing Homebrew v1 completions continue to work
-	export BASH_COMPLETION_COMPAT_DIR="$(brew --prefix)/etc/bash_completion.d";
-	source "$(brew --prefix)/etc/profile.d/bash_completion.sh";
-elif [ -f /etc/bash_completion ]; then
-	source /etc/bash_completion;
-fi;
-
-# setup autocompletion
-# complete -o default -F __start_kubectl k
-
-if [ -f "/usr/share/bash-completion/completions/git" ]; then
-    source /usr/share/bash-completion/completions/git
-    __git_complete g __git_main
+	# Git completion for bash
+	if [ -f "/usr/share/bash-completion/completions/git" ]; then
+		. /usr/share/bash-completion/completions/git
+		__git_complete g __git_main 2>/dev/null
+	fi
+elif [ -n "$ZSH_VERSION" ]; then
+	# Zsh completion - homebrew
+	if command -v brew &> /dev/null; then
+		FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
+	fi
 fi
 
 for file in $alias_scripts_dir/*; do
-	[ -r "$file" ] && [ -f "$file" ] && source "$file";
+	[ -r "$file" ] && [ -f "$file" ] && . "$file";
 done
 
 for file in $alias_scripts_dir/extra/*; do
-	[ -r "$file" ] && [ -f "$file" ] && source "$file";
+	[ -r "$file" ] && [ -f "$file" ] && . "$file";
 done
 
-if [[ ${TERM_PROGRAM:-} == "Apple_Terminal" ]]; then
+if [ "${TERM_PROGRAM:-}" = "Apple_Terminal" ]; then
 	export STARSHIP_CONFIG="${HOME}/.config/starship.no-font.toml"
 fi
 
-# Setup fzf key bindings and fuzzy completion (only in interactive shells)
-# if [[ $- == *i* ]] && [[ -f ~/.fzf/shell/key-bindings.bash ]]; then
-# 	source ~/.fzf/shell/key-bindings.bash
-# fi
+# Setup fzf key bindings and fuzzy completion (shell-aware)
+case "$-" in
+*i*)
+	if type setup_fzf >/dev/null 2>&1; then
+		# Use our detection utility
+		setup_fzf
+	else
+		# Manual fallback based on shell detection
+		fzf_base="${HOME}/.fzf/shell"
+		[ ! -d "$fzf_base" ] && fzf_base="/opt/homebrew/opt/fzf/shell"
+		[ ! -d "$fzf_base" ] && fzf_base="/usr/local/opt/fzf/shell"
+		[ ! -d "$fzf_base" ] && fzf_base="/usr/share/fzf"
 
-# if [[ -f ~/.fzf/shell/completion.bash ]]; then
-# 	source ~/.fzf/shell/completion.bash
-# fi
+		if [ -d "$fzf_base" ]; then
+			if [ -n "$ZSH_VERSION" ]; then
+				[ -f "$fzf_base/completion.zsh" ] && . "$fzf_base/completion.zsh"
+				[ -f "$fzf_base/key-bindings.zsh" ] && . "$fzf_base/key-bindings.zsh"
+			elif [ -n "$BASH_VERSION" ]; then
+				[ -f "$fzf_base/completion.bash" ] && . "$fzf_base/completion.bash"
+				[ -f "$fzf_base/key-bindings.bash" ] && . "$fzf_base/key-bindings.bash"
+			fi
+		fi
+	fi
+	;;
+esac
 
-unset file;
+unset file 2>/dev/null

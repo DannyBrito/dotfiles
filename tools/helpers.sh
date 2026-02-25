@@ -1,10 +1,21 @@
-#!/bin/bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 # Helper functions for dotfiles setup
+# Note: This file must be standalone - detect.sh is set up by bootstrap later
 
 get_shell_type() {
-    basename "$SHELL"
+    # Detect the actual running shell, not just $SHELL
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        echo "zsh"
+    elif [ -n "${BASH_VERSION:-}" ]; then
+        echo "bash"
+    elif [ -n "${FISH_VERSION:-}" ]; then
+        echo "fish"
+    else
+        # Fallback to $SHELL
+        basename "${SHELL:-sh}"
+    fi
 }
 
 get_startup_file_path() {
@@ -18,7 +29,7 @@ get_startup_file_path() {
         *)    shell_profile="" ;;
     esac
 
-    if [[ -n "$shell_profile" && -f "$shell_profile" ]]; then
+    if [ -n "$shell_profile" ] && [ -f "$shell_profile" ]; then
         echo "$shell_profile"
     else
         echo "$HOME/.profile"
@@ -35,7 +46,7 @@ safe_source() {
     local file="$1"
     if [ -f "$file" ] && [ -r "$file" ]; then
         # shellcheck source=/dev/null
-        source "$file"
+        . "$file"
         return 0
     else
         echo "Warning: Cannot source file: $file" >&2
@@ -50,21 +61,6 @@ backup_file() {
         local backup="${file}.backup.$(date +%Y%m%d_%H%M%S)"
         cp "$file" "$backup"
         echo "Created backup: $backup"
-    fi
-}
-
-# Detect OS
-detect_os() {
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        echo "linux"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "macos"
-    elif [[ "$OSTYPE" == "cygwin" ]]; then
-        echo "windows"
-    elif [[ "$OSTYPE" == "msys" ]]; then
-        echo "windows"
-    else
-        echo "unknown"
     fi
 }
 

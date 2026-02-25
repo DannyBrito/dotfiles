@@ -8,7 +8,7 @@ function gri (){
 function git-code-editor(){
     local code_git="code --wait"
     echo "Toggling code as git editor variable"
-    if [[ "$GIT_EDITOR" == "${code_git}" ]]; then
+    if [ "$GIT_EDITOR" = "$code_git" ]; then
         unset GIT_EDITOR
     else
         export GIT_EDITOR="$code_git"
@@ -78,9 +78,9 @@ function gfp(){
 function gbn(){
     local branch="$1"
     echo "Running: git checkout -b $branch $2"
-    if [[ "$branch" == *:* ]]; then
-        branch="${branch#*:}"
-    fi
+    case "$branch" in
+        *:*) branch="${branch#*:}" ;;
+    esac
     git checkout -b $branch $2
 }
 
@@ -104,7 +104,7 @@ function gcod(){
 # Toggle signoff for this repository
 function git-toggle-signoff(){
     local current=$(git config --local --get commit.signoff 2>/dev/null)
-    if [[ "$current" == "true" ]]; then
+    if [ "$current" = "true" ]; then
         git config --local --unset commit.signoff
         echo "✗ Signoff (DCO) DISABLED for this repo"
     else
@@ -116,7 +116,7 @@ function git-toggle-signoff(){
 # Helper to check if signoff is enabled
 function _git_should_signoff(){
     local signoff=$(git config --get commit.signoff 2>/dev/null)
-    if [[ "$signoff" == "true" ]]; then
+    if [ "$signoff" = "true" ]; then
         echo "--signoff"
     else
         echo ""
@@ -171,9 +171,9 @@ function gco(){
     if [ -z "$branch" ]; then
         branch="$( git branch -l --format='%(refname:short)' | fzf)"
     fi
-    if [[ "$branch" == *:* ]]; then
-        branch="${branch#*:}"
-    fi
+    case "$branch" in
+        *:*) branch="${branch#*:}" ;;
+    esac
     if [ -z "$branch" ]; then
         echo "Cancel none picked"
         return 1
@@ -253,10 +253,12 @@ function git-delete-branch-full() {
         echo "Cancel none picked"
         return 1
     fi
-    if [[ "${branch_name}" == "master" || "${branch_name}" == "main" ]]; then
-        echo "no allowed"
-        return 1
-    fi
+    case "$branch_name" in
+        master|main)
+            echo "not allowed"
+            return 1
+            ;;
+    esac
     local remote_name="${2:-origin}"
     echo "Deleting '$branch_name', locally and from remote: $remote_name"
     git push "$remote_name" --delete "$branch_name"
@@ -276,11 +278,16 @@ function gdiff(){
     git diff --name-only --relative --diff-filter=d | xargs bat --diff
 }
 
-# AUTO_COMPLETES FUNCTIONS:
-
-_gitremotes_completion() {
-    local cur=${COMP_WORDS[COMP_CWORD]}
-    COMPREPLY=($(git remote | grep "^$cur"))
-}
-
-complete -F _gitremotes_completion gfr gfpr gfp gfetch
+# AUTO_COMPLETES FUNCTIONS (shell-aware):
+if [ -n "$BASH_VERSION" ]; then
+    _gitremotes_completion() {
+        local cur=${COMP_WORDS[COMP_CWORD]}
+        COMPREPLY=($(git remote | grep "^$cur"))
+    }
+    complete -F _gitremotes_completion gfr gfpr gfp gfetch
+elif [ -n "$ZSH_VERSION" ]; then
+    _gitremotes_completion() {
+        compadd $(git remote)
+    }
+    compdef _gitremotes_completion gfr gfpr gfp gfetch
+fi

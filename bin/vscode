@@ -13,9 +13,9 @@ for s in $sockets; do
         socket="${s}"
         break
     fi
-    if [[ "${out}" = *"Connection refused"* ]]; then
-        rm "${s}"
-    fi
+    case "$out" in
+        *"Connection refused"*) rm "${s}" ;;
+    esac
 done
 if [ -z "${socket}" ]; then
     echo "VSCode IPC socket not found"
@@ -23,7 +23,7 @@ if [ -z "${socket}" ]; then
 fi
 
 export VSCODE_IPC_HOOK_CLI="${socket}"
-if [ ! -v 1 ]; then
+if [ -z "${1:-}" ]; then
     ${script} .
 else
     ${script} $@
