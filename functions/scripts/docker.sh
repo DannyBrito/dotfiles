@@ -19,8 +19,22 @@ function docker-images-rm-all(){
 }
 
 function docker-hard-reset(){
-    echo "Running: sudo systemctl restart docker docker.socket"
-    sudo systemctl restart docker docker.socket
+    # Platform-aware Docker reset
+    case "$(uname -s)" in
+        Darwin*)
+            echo "Running: killall Docker && open -a Docker"
+            killall Docker 2>/dev/null
+            open -a Docker
+            ;;
+        Linux*)
+            echo "Running: sudo systemctl restart docker docker.socket"
+            sudo systemctl restart docker docker.socket
+            ;;
+        *)
+            echo "Unsupported platform for docker-hard-reset"
+            return 1
+            ;;
+    esac
 }
 
 function docker-full-cleanup(){

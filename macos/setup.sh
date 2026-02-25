@@ -1,241 +1,394 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
+#
+# macOS Preferences Setup
+# All settings individually toggleable, all OFF by default
+#
+# Usage:
+#   ./setup.sh              # Interactive mode - toggle settings
+#   ./setup.sh --all        # Enable and apply ALL settings
+#   ./setup.sh --list       # List all settings with status
+#   ./setup.sh --backup     # Create backup only
+#   ./setup.sh --restore    # Restore from backup
+#   ./setup.sh --help       # Show help
 
-# ~/.macos — https://mths.be/macos
+set -euo pipefail
 
-# Close any open System Preferences panes, to prevent them from overriding
-# settings we’re about to change
-osascript -e 'tell application "System Preferences" to quit'
+SCRIPT_DIR="${0:a:h}"
+PREFS_DIR="${SCRIPT_DIR}/prefs"
+LIB_DIR="${PREFS_DIR}/lib"
 
-# Ask for the administrator password upfront
-sudo -v
+# Source libraries
+source "${LIB_DIR}/core.sh"
+source "${LIB_DIR}/backup.sh"
+source "${PREFS_DIR}/settings.sh"
 
-# Keep-alive: update existing `sudo` time stamp until `.macos` has finished
-while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+# Display version and system info
+show_system_info() {
+    echo "${BOLD}macOS Preferences Setup${NC}"
+    echo "macOS $(get_macos_version) ($(get_macos_name))"
+    echo "Architecture: $(uname -m)"
+    if is_sip_enabled; then
+        echo "SIP: ${GREEN}Enabled${NC}"
+    else
+        echo "SIP: ${YELLOW}Disabled${NC}"
+    fi
+    echo
+}
 
-###############################################################################
-# General UI/UX                                                               #
-###############################################################################
+# Show help
+show_help() {
+    cat << 'EOF'
+macOS Preferences Setup
 
-# Save to disk (not to iCloud) by default
-defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
+All settings individually toggleable. All OFF by default.
 
-# Automatically quit printer app once the print jobs complete
-defaults write com.apple.print.PrintingPrefs "Quit When Finished" -bool true
+USAGE:
+    ./setup.sh [OPTIONS]
 
-# Disable the “Are you sure you want to open this application?” dialog
-defaults write com.apple.LaunchServices LSQuarantine -bool false
+OPTIONS:
+    (no options)      Interactive menu - choose action
+    --all             Enable and apply ALL settings
+    --list            List all available settings
+    --backup          Create backup only (no changes applied)
+    --restore [PATH]  Restore from backup (latest or specified path)
+    --list-backups    Show all available backups
+    --no-backup       Skip backup before applying changes
+    --help, -h        Show this help message
 
-# Remove duplicates in the “Open With” menu (also see `lscleanup` alias)
-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -kill -r -domain local -domain system -domain user
+EXAMPLES:
+    ./setup.sh                   # Show interactive menu
+    ./setup.sh --all             # Apply everything
+    ./setup.sh --list            # See all available settings
+    ./setup.sh --backup          # Backup current preferences
+    ./setup.sh --restore         # Restore from latest backup
+EOF
+}
 
-# Disable the crash reporter
-defaults write com.apple.CrashReporter DialogType -string "none"
+# Interactive picker
+run_interactive() {
+    local total=${#SETTINGS_ORDER[@]}
+    local current=1
+    local scroll_offset=0
+    local term_lines=$(tput lines)
+    local max_visible=$((term_lines - 8))
 
-# Reveal IP address, hostname, OS version, etc. when clicking the clock
-# in the login window
-sudo defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
+    # Hide cursor
+    tput civis
+    trap 'tput cnorm; echo' EXIT INT TERM
 
-###############################################################################
-# Trackpad, mouse, keyboard, Bluetooth accessories, and input                 #
-###############################################################################
+    while true; do
+        clear
+        echo "${BOLD}macOS Preferences Setup${NC}"
+        echo "Use ↑/↓ to navigate, SPACE to toggle, ENTER to apply, q to quit"
+        echo "Enabled: $(count_enabled_settings)/${total}"
+        echo "─────────────────────────────────────────────────────────────"
 
-# Trackpad: map bottom right corner to right-click
-defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadCornerSecondaryClick -int 2
-defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick -bool true
-defaults -currentHost write NSGlobalDomain com.apple.trackpad.trackpadCornerClickBehavior -int 1
-defaults -currentHost write NSGlobalDomain com.apple.trackpad.enableSecondaryClick -bool true
+        # Calculate scroll window
+        if [[ $current -gt $((scroll_offset + max_visible)) ]]; then
+            scroll_offset=$((current - max_visible))
+        elif [[ $current -le $scroll_offset ]]; then
+            scroll_offset=$((current - 1))
+        fi
 
-# Stop iTunes from responding to the keyboard media keys
-launchctl unload -w /System/Library/LaunchAgents/com.apple.rcd.plist 2> /dev/null
+        local displayed=0
+        local idx=1
+        for id in "${SETTINGS_ORDER[@]}"; do
+            if [[ $idx -gt $scroll_offset ]] && [[ $displayed -lt $max_visible ]]; then
+                local desc=$(get_setting_desc "$id")
+                local mark="[ ]"
+                [[ "${SETTINGS_ENABLED[$id]}" == "1" ]] && mark="${GREEN}[✓]${NC}"
 
-###############################################################################
-# Energy saving                                                               #
-###############################################################################
+                local sudo_marker=""
+                setting_needs_sudo "$id" && sudo_marker=" ${YELLOW}(sudo)${NC}"
 
-# Remove the sleep image file to save disk space
-sudo rm /private/var/vm/sleepimage
-# Create a zero-byte file instead…
-sudo touch /private/var/vm/sleepimage
-# …and make sure it can’t be rewritten
-sudo chflags uchg /private/var/vm/sleepimage
+                if [[ $idx -eq $current ]]; then
+                    echo "${REVERSE} ${mark} ${desc}${sudo_marker} ${NC}"
+                else
+                    echo " ${mark} ${desc}${sudo_marker}"
+                fi
+                displayed=$((displayed + 1))
+            fi
+            idx=$((idx + 1))
+        done
 
-###############################################################################
-# Screen                                                                      #
-###############################################################################
+        # Read key
+        local key=""
+        IFS= read -rsk1 key || key=""
+        case "$key" in
+            $'\x1b')  # Escape sequence
+                local rest=""
+                read -rsk2 rest 2>/dev/null || rest=""
+                case "$rest" in
+                    '[A') [[ $current -gt 1 ]] && current=$((current - 1)) ;;  # Up
+                    '[B') [[ $current -lt $total ]] && current=$((current + 1)) ;;  # Down
+                esac
+                ;;
+            ' ')  # Space - toggle
+                local id="${SETTINGS_ORDER[$current]}"
+                toggle_setting "$id"
+                ;;
+            'a'|'A')  # Enable all
+                enable_all_settings
+                ;;
+            'n'|'N')  # Disable all
+                for id in "${SETTINGS_ORDER[@]}"; do
+                    disable_setting "$id"
+                done
+                ;;
+            ''|$'\n')  # Enter - apply
+                tput cnorm
+                break
+                ;;
+            'q'|'Q')  # Quit
+                tput cnorm
+                echo "Cancelled."
+                return 1
+                ;;
+        esac
+    done
 
-# Save screenshots to the desktop
-defaults write com.apple.screencapture location -string "${HOME}/Desktop"
+    return 0
+}
 
-# Save screenshots in PNG format (other options: BMP, GIF, JPG, PDF, TIFF)
-defaults write com.apple.screencapture type -string "png"
+# Apply selected settings
+apply_settings() {
+    local skip_backup="${1:-false}"
+    local enabled_count=$(count_enabled_settings)
 
-###############################################################################
-# Finder                                                                      #
-###############################################################################
+    if [[ $enabled_count -eq 0 ]]; then
+        log_warning "No settings enabled. Nothing to apply."
+        return 0
+    fi
 
-# Finder: disable window animations and Get Info animations
-# defaults write com.apple.finder DisableAllAnimations -bool true
+    echo
+    log_section "Applying ${enabled_count} Settings"
 
-# Set Desktop as the default location for new Finder windows
-# For other paths, use `PfLo` and `file:///full/path/here/`
-defaults write com.apple.finder NewWindowTarget -string "PfDe"
-defaults write com.apple.finder NewWindowTargetPath -string "file://${HOME}/Desktop/"
+    # Request sudo if needed
+    if any_settings_need_sudo; then
+        log_info "Some settings require administrator privileges."
+        sudo -v || { log_error "Sudo required for some settings"; return 1; }
+        # Keep sudo alive
+        while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+    fi
 
-# Finder: show all filename extensions
-# defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+    # Create backup unless skipped
+    if [[ "$skip_backup" != "true" ]]; then
+        log_section "Creating Backup"
+        backup_all_preferences
+    fi
 
-# Finder: show status bar
-defaults write com.apple.finder ShowStatusBar -bool true
+    # Apply settings
+    echo
+    apply_enabled_settings
 
-# Finder: show path bar
-defaults write com.apple.finder ShowPathbar -bool true
+    # Restart affected apps
+    echo
+    log_section "Restarting Affected Applications"
+    for app in "Dock" "Finder" "SystemUIServer"; do
+        killall "$app" &>/dev/null || true
+    done
+    log_success "Applications restarted"
 
-# Display full POSIX path as Finder window title
-defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
+    echo
+    log_success "Done! Some changes may require logout/restart."
+}
 
-# Keep folders on top when sorting by name
-defaults write com.apple.finder _FXSortFoldersFirst -bool true
+# Main
+main() {
+    local action=""
+    local skip_backup=false
+    local restore_path=""
 
-# When performing a search, search the current folder by default
-defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --help|-h)
+                show_help
+                return 0
+                ;;
+            --list)
+                action="list"
+                ;;
+            --all)
+                action="all"
+                ;;
+            --backup)
+                action="backup"
+                ;;
+            --restore)
+                action="restore"
+                if [[ -n "${2:-}" ]] && [[ ! "$2" =~ ^-- ]]; then
+                    restore_path="$2"
+                    shift
+                fi
+                ;;
+            --list-backups)
+                action="list-backups"
+                ;;
+            --no-backup)
+                skip_backup=true
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                show_help
+                return 1
+                ;;
+        esac
+        shift
+    done
 
-# Disable the warning when changing a file extension
-defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
+    # Handle actions
+    case "$action" in
+        list)
+            log_section "All Available Settings (${#SETTINGS_ORDER[@]} total)"
+            echo "All settings are OFF by default. Use interactive mode to enable."
+            echo
+            list_all_settings
+            ;;
+        all)
+            show_system_info
+            enable_all_settings
+            apply_settings "$skip_backup"
+            ;;
+        backup)
+            log_section "Creating Full Preference Backup"
+            backup_all_preferences
+            ;;
+        restore)
+            log_section "Restoring from Backup"
+            if [[ -n "$restore_path" ]]; then
+                restore_all_from_backup "$restore_path"
+            else
+                local latest=$(get_latest_backup)
+                if [[ -z "$latest" ]]; then
+                    log_error "No backups found"
+                    return 1
+                fi
+                restore_all_from_backup "$latest"
+            fi
+            ;;
+        list-backups)
+            log_section "Available Backups"
+            list_backups
+            ;;
+        *)
+            # Show main menu
+            show_main_menu
+            ;;
+    esac
+}
 
-# # Enable spring loading for directories
-# defaults write NSGlobalDomain com.apple.springing.enabled -bool true
+# Main menu
+show_main_menu() {
+    while true; do
+        clear
+        echo "${BOLD}macOS Preferences Setup${NC}"
+        echo "macOS $(get_macos_version) ($(get_macos_name))"
+        echo
+        echo "What would you like to do?"
+        echo
+        echo "  ${BOLD}1${NC}) Configure preferences (select settings to apply)"
+        echo "  ${BOLD}2${NC}) List all available settings"
+        echo "  ${BOLD}3${NC}) Create backup"
+        echo "  ${BOLD}4${NC}) List backups"
+        echo "  ${BOLD}5${NC}) Restore from backup"
+        echo "  ${BOLD}q${NC}) Quit"
+        echo
+        echo -n "Choice [1-5/q]: "
 
-# # Remove the spring loading delay for directories
-# defaults write NSGlobalDomain com.apple.springing.delay -float 0
+        local choice=""
+        read -r choice
 
-# Avoid creating .DS_Store files on network or USB volumes
-defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
-defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
+        case "$choice" in
+            1)
+                show_system_info
+                if run_interactive; then
+                    apply_settings false
+                fi
+                echo
+                echo -n "Press Enter to continue..."
+                read -r
+                ;;
+            2)
+                clear
+                log_section "All Available Settings (${#SETTINGS_ORDER[@]} total)"
+                echo "All settings are OFF by default."
+                echo
+                list_all_settings
+                echo
+                echo -n "Press Enter to continue..."
+                read -r
+                ;;
+            3)
+                clear
+                log_section "Creating Full Preference Backup"
+                backup_all_preferences
+                echo
+                echo -n "Press Enter to continue..."
+                read -r
+                ;;
+            4)
+                clear
+                log_section "Available Backups"
+                list_backups
+                echo
+                echo -n "Press Enter to continue..."
+                read -r
+                ;;
+            5)
+                clear
+                log_section "Restore from Backup"
+                list_backups
+                echo
+                echo -n "Enter backup number (or path), or 'c' to cancel: "
+                local backup_choice=""
+                read -r backup_choice
 
-# Use list view in all Finder windows by default
-# Four-letter codes for the other view modes: `icnv`, `clmv`, `glyv`
-defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
+                if [[ "$backup_choice" == "c" || -z "$backup_choice" ]]; then
+                    continue
+                fi
 
-# Disable the warning before emptying the Trash
-defaults write com.apple.finder WarnOnEmptyTrash -bool false
+                # If it's a number, get the path from list
+                if [[ "$backup_choice" =~ ^[0-9]+$ ]]; then
+                    local backup_path=$(get_backup_by_index "$backup_choice")
+                    if [[ -n "$backup_path" ]]; then
+                        restore_all_from_backup "$backup_path"
+                    else
+                        log_error "Invalid backup number"
+                    fi
+                elif [[ -d "$backup_choice" ]]; then
+                    restore_all_from_backup "$backup_choice"
+                else
+                    log_error "Invalid backup path"
+                fi
+                echo
+                echo -n "Press Enter to continue..."
+                read -r
+                ;;
+            q|Q)
+                echo "Goodbye!"
+                return 0
+                ;;
+            *)
+                ;;
+        esac
+    done
+}
 
-# Enable AirDrop over Ethernet and on unsupported Macs running Lion
-defaults write com.apple.NetworkBrowser BrowseAllInterfaces -bool true
+# Get backup path by index number
+get_backup_by_index() {
+    local index="$1"
+    local count=0
 
-# Show the ~/Library folder
-chflags nohidden ~/Library && xattr -d com.apple.FinderInfo ~/Library
+    if [[ -d "${BACKUP_BASE_DIR:-$HOME/.macos-prefs-backup}" ]]; then
+        while IFS= read -r backup; do
+            if [[ $count -eq $index ]]; then
+                echo "$backup"
+                return 0
+            fi
+            count=$((count + 1))
+        done < <(ls -1d "${BACKUP_BASE_DIR:-$HOME/.macos-prefs-backup}"/*/ 2>/dev/null | sort -r)
+    fi
+    return 1
+}
 
-# Show the /Volumes folder
-sudo chflags nohidden /Volumes
-
-# Expand the following File Info panes:
-# “General”, “Open with”, and “Sharing & Permissions”
-defaults write com.apple.finder FXInfoPanesExpanded -dict \
-	General -bool true \
-	OpenWith -bool true \
-	Privileges -bool true
-
-###############################################################################
-# Dock, Dashboard, and hot corners                                            #
-###############################################################################
-
-# Enable highlight hover effect for the grid view of a stack (Dock)
-defaults write com.apple.dock mouse-over-hilite-stack -bool true
-
-# Set the icon size of Dock items to 36 pixels
-# defaults write com.apple.dock tilesize -int 36
-
-# Change minimize/maximize window effect
-# defaults write com.apple.dock mineffect -string "scale"
-
-# Minimize windows into their application’s icon
-defaults write com.apple.dock minimize-to-application -bool true
-
-# Show indicator lights for open applications in the Dock
-defaults write com.apple.dock show-process-indicators -bool true
-
-# Show only open applications in the Dock
-#defaults write com.apple.dock static-only -bool true
-
-# Don’t animate opening applications from the Dock
-# defaults write com.apple.dock launchanim -bool false
-
-# Speed up Mission Control animations
-defaults write com.apple.dock expose-animation-duration -float 0.1
-
-# Remove the auto-hiding Dock delay
-defaults write com.apple.dock autohide-delay -float 0
-
-# Remove the animation when hiding/showing the Dock
-defaults write com.apple.dock autohide-time-modifier -float 0
-
-# Automatically hide and show the Dock
-defaults write com.apple.dock autohide -bool true
-
-# Don’t show recent applications in Dock
-defaults write com.apple.dock show-recents -bool false
-
-# Hot corners
-# Possible values:
-#  0: no-op
-#  2: Mission Control
-#  3: Show application windows
-#  4: Desktop
-#  5: Start screen saver
-#  6: Disable screen saver
-#  7: Dashboard
-# 10: Put display to sleep
-# 11: Launchpad
-# 12: Notification Center
-# 13: Lock Screen
-# # Top left screen corner → Mission Control
-# defaults write com.apple.dock wvous-tl-corner -int 2
-# defaults write com.apple.dock wvous-tl-modifier -int 0
-# # Top right screen corner → Desktop
-# defaults write com.apple.dock wvous-tr-corner -int 4
-# defaults write com.apple.dock wvous-tr-modifier -int 0
-# # Bottom left screen corner → Start screen saver
-# defaults write com.apple.dock wvous-bl-corner -int 5
-# defaults write com.apple.dock wvous-bl-modifier -int 0
-
-###############################################################################
-# Terminal & iTerm 2                                                          #
-###############################################################################
-
-# Only use UTF-8 in Terminal.app
-defaults write com.apple.terminal StringEncodings -array 4
-
-# Don’t display the annoying prompt when quitting iTerm
-defaults write com.googlecode.iterm2 PromptOnQuit -bool false
-
-###############################################################################
-# Activity Monitor                                                            #
-###############################################################################
-
-# Show the main window when launching Activity Monitor
-# defaults write com.apple.ActivityMonitor OpenMainWindow -bool true
-
-# Visualize CPU usage in the Activity Monitor Dock icon
-# defaults write com.apple.ActivityMonitor IconType -int 5
-
-# Show all processes in Activity Monitor
-# defaults write com.apple.ActivityMonitor ShowCategory -int 0
-
-# Sort Activity Monitor results by CPU usage
-# defaults write com.apple.ActivityMonitor SortColumn -string "CPUUsage"
-# defaults write com.apple.ActivityMonitor SortDirection -int 0
-
-###############################################################################
-# Kill affected applications                                                  #
-###############################################################################
-
-for app in "Activity Monitor" \
-	"cfprefsd" \
-	"Dock" \
-	"Finder" \
-	"Safari" \
-	"SystemUIServer" \
-	"Terminal" \
-	killall "${app}" &> /dev/null
-done
-echo "Done. Note that some of these changes require a logout/restart to take effect."
+main "$@"

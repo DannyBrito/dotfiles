@@ -1,116 +1,233 @@
-#!/bin/bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 # Bootstrap script for dotfiles setup
-. "$PWD/tools/helpers.sh"
+# Idempotent - safe to run multiple times
+
+DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$DOTFILES_DIR/tools/helpers.sh"
 
 # shellcheck source=./tools/validate.sh
-. "$PWD/tools/validate.sh"
+. "$DOTFILES_DIR/tools/validate.sh"
+
+# Detect environment type
+detect_env() {
+    if [ -n "${CODESPACES:-}" ]; then
+        echo "codespaces"
+    elif [ -n "${GITPOD_WORKSPACE_ID:-}" ]; then
+        echo "gitpod"
+    elif [ -f /.dockerenv ]; then
+        echo "docker"
+    elif [ -n "${WSL_DISTRO_NAME:-}" ]; then
+        echo "wsl"
+    elif [ -n "${SSH_CONNECTION:-}" ]; then
+        echo "ssh"
+    else
+        echo "local"
+    fi
+}
+
+# Detect OS
+detect_os() {
+    case "$(uname -s)" in
+        Darwin*) echo "macos" ;;
+        Linux*)  echo "linux" ;;
+        MINGW*|MSYS*|CYGWIN*) echo "windows" ;;
+        *)       echo "unknown" ;;
+    esac
+}
+
+# Create symlink only if target differs (idempotent)
+safe_symlink() {
+    local src="$1"
+    local dest="$2"
+
+    if [ -L "$dest" ]; then
+        local current_target
+        current_target="$(readlink "$dest" 2>/dev/null || true)"
+        if [ "$current_target" = "$src" ]; then
+            log "  ✓ $dest (unchanged)"
+            return 0
+        fi
+        log "  ↻ $dest (updating)"
+        rm "$dest"
+    elif [ -e "$dest" ]; then
+        log "  ⚠ $dest exists (backing up)"
+        backup_file "$dest"
+        rm -rf "$dest"
+    else
+        log "  + $dest (new)"
+    fi
+    ln -s "$src" "$dest"
+}
+
+# Add content to file if marker not present (idempotent)
+add_to_file_if_missing() {
+    local file="$1"
+    local marker="$2"
+    local content="$3"
+
+    if [ -f "$file" ] && grep -q "$marker" "$file" 2>/dev/null; then
+        log "  ✓ $file already configured"
+        return 0
+    fi
+
+    if [ -f "$file" ]; then
+        log "  ↻ $file (appending)"
+    else
+        log "  + $file (creating)"
+    fi
+
+    echo "$content" >> "$file"
+}
+
+# Prepend content to file if marker not present (idempotent)
+prepend_to_file_if_missing() {
+    local file="$1"
+    local marker="$2"
+    local content="$3"
+
+    if [ -f "$file" ] && grep -q "$marker" "$file" 2>/dev/null; then
+        log "  ✓ $file already configured"
+        return 0
+    fi
+
+    log "  ↻ $file (prepending)"
+    [ -f "$file" ] && backup_file "$file"
+
+    local temp_file
+    temp_file=$(mktemp)
+    echo "$content" > "$temp_file"
+    [ -f "$file" ] && cat "$file" >> "$temp_file"
+    mv "$temp_file" "$file"
+}
+
+setup_symlinks() {
+    local config_dir="$1"
+
+    log "🔗 Setting up symlinks..."
+    safe_symlink "$DOTFILES_DIR/functions" "$config_dir/functions"
+    safe_symlink "$DOTFILES_DIR/bin" "$config_dir/bin"
+    safe_symlink "$DOTFILES_DIR/tools" "$config_dir/tools"
+    safe_symlink "$DOTFILES_DIR/.dotfiles-shell-ext" "$HOME/.dotfiles-shell-ext"
+    safe_symlink "$DOTFILES_DIR/vars.env" "$config_dir/vars.env"
+    safe_symlink "$DOTFILES_DIR/cred.env" "$config_dir/cred.env"
+}
+
+setup_environment_files() {
+    log "📝 Setting up environment files..."
+    [ ! -e "$DOTFILES_DIR/vars.env" ] && touch "$DOTFILES_DIR/vars.env" && log "  + vars.env"
+    [ ! -e "$DOTFILES_DIR/cred.env" ] && touch "$DOTFILES_DIR/cred.env" && log "  + cred.env"
+
+    if [ ! -e "$DOTFILES_DIR/functions/scripts/extra/extra" ]; then
+        mkdir -p "$DOTFILES_DIR/functions/scripts/extra"
+        touch "$DOTFILES_DIR/functions/scripts/extra/extra"
+        log "  + functions/scripts/extra/extra"
+    fi
+}
+
+setup_shell_profile() {
+    local config_dir="$1"
+    local env_type="$2"
+    local shell_type
+    shell_type="$(get_shell_type)"
+
+    log "🐚 Configuring shell ($shell_type) for $env_type environment..."
+
+    # Ensure .profile exists
+    [ ! -f "$HOME/.profile" ] && touch "$HOME/.profile"
+
+    # Add dotfiles config to .profile (at top to avoid conflicts)
+    local profile_content
+    profile_content="# Dotfiles configuration - managed by bootstrap
+# Prevent multiple sourcing
+if [ -n \"\${DOTFILES_PROFILE_LOADED:-}\" ]; then
+    return 2>/dev/null || true
+fi
+DOTFILES_PROFILE_LOADED=1
+
+# Source dotfiles shell extensions
+[ -f \"\$HOME/.dotfiles-shell-ext\" ] && . \"\$HOME/.dotfiles-shell-ext\"
+
+# Add bin directories to path
+export PATH=\"\$HOME/.local/bin:\$HOME/.fzf/bin:${config_dir}/bin:\$PATH\"
+"
+    prepend_to_file_if_missing "$HOME/.profile" "DOTFILES_PROFILE_LOADED" "$profile_content"
+
+    # Handle shell-specific startup files
+    local startup_file
+    startup_file="$(get_startup_file_path)"
+
+    if [ "$startup_file" != "$HOME/.profile" ]; then
+        local source_profile="
+# Source .profile for dotfiles configuration
+[ -f \"\$HOME/.profile\" ] && . \"\$HOME/.profile\"
+"
+        add_to_file_if_missing "$startup_file" ".profile" "$source_profile"
+    fi
+
+    # Environment-specific setup
+    case "$env_type" in
+        codespaces|gitpod|docker)
+            # These environments often use .bashrc for interactive shells
+            if [ -f "$HOME/.bashrc" ] || [ "$env_type" = "codespaces" ]; then
+                local bashrc_content="
+# Source .profile for dotfiles configuration ($env_type)
+[ -f \"\$HOME/.profile\" ] && . \"\$HOME/.profile\"
+"
+                add_to_file_if_missing "$HOME/.bashrc" ".profile" "$bashrc_content"
+            fi
+            ;;
+        wsl)
+            # WSL may need both .bashrc and .zshrc
+            if [ -f "$HOME/.bashrc" ]; then
+                add_to_file_if_missing "$HOME/.bashrc" ".profile" "[ -f \"\$HOME/.profile\" ] && . \"\$HOME/.profile\""
+            fi
+            ;;
+    esac
+}
+
+print_summary() {
+    local env_type="$1"
+    local os_type="$2"
+
+    log ""
+    log "🎉 Bootstrap completed!"
+    log "   Environment: $env_type"
+    log "   OS: $os_type"
+    log "   Shell: $(get_shell_type)"
+    log ""
+    log "Next steps:"
+    log "   • Start a new terminal, or run: . ~/.profile"
+    log "   • Optional: Run ./install-tools.sh to install fzf, starship, etc."
+}
 
 main() {
-    log "🚀 Starting dotfiles bootstrap process..."
+    local env_type
+    local os_type
+    env_type="$(detect_env)"
+    os_type="$(detect_os)"
 
-    # Run validations first
+    log "🚀 Starting dotfiles bootstrap..."
+    log "   Environment: $env_type | OS: $os_type | Shell: $(get_shell_type)"
+    log ""
+
+    # Run validations
     validate_dependencies
     validate_shell
     validate_permissions
 
     local config_dir="${HOME}/.config/db_setup_config"
-    log "📁 Creating configuration directory: $config_dir"
+    log "📁 Config directory: $config_dir"
     mkdir -p "$config_dir"
 
-    # Create symlinks
-    log "🔗 Creating symlinks..."
-    ln -sf "$PWD/functions" "$config_dir"
-    ln -sf "$PWD/bin" "$config_dir"
-    ln -sf "$PWD/.dotfiles-shell-ext" "$HOME/.dotfiles-shell-ext"
+    setup_environment_files
+    setup_symlinks "$config_dir"
+    setup_shell_profile "$config_dir" "$env_type"
 
-    # Create environment files
-    log "📝 Setting up environment files..."
-    [[ ! -e "$PWD/vars.env" ]] && touch "$PWD/vars.env"
-    [[ ! -e "$config_dir/cred.env" ]] && touch "$PWD/cred.env"
-    [[ ! -e "$config_dir/functions/scripts/extra" ]] && {
-        mkdir -p "$PWD/functions/scripts/extra"
-        touch "$PWD/functions/scripts/extra/extra"
-    }
-
-    ln -sf "$PWD/vars.env" "$config_dir/vars.env"
-    ln -sf "$PWD/cred.env" "$config_dir/cred.env"
-
-    # Configure shell startup file
-    local startup_file
-    startup_file="$(get_startup_file_path)"
-    log "🐚 Configuring shell startup file: $startup_file"
-
-    # Handle shell-specific profile files - make them source .profile
-    if [[ "$startup_file" != *".profile" ]]; then
-        # Add .profile sourcing if not already present
-        if [[ ! -e "$startup_file" ]] || ! grep -q "\.profile" "$startup_file"; then
-            if [[ -e "$startup_file" ]]; then
-                log "➕ Adding .profile sourcing to existing $startup_file"
-                backup_file "$startup_file"
-            else
-                log "📄 Creating $startup_file to source .profile"
-            fi
-            cat << EOF >> "$startup_file"
-
-# Source .profile for environment setup
-[ -f "$HOME/.profile" ] && . "$HOME/.profile"
-EOF
-        else
-            log "✅ $startup_file already sources .profile"
-        fi
-    fi
-
-    # Add our dotfiles configuration to .profile with guard (at the top to avoid conflicts)
-    if ! grep -q "DOTFILES_PROFILE_LOADED" "$HOME/.profile"; then
-        log "➕ Adding dotfiles configuration to .profile"
-        backup_file "$HOME/.profile"
-
-        # Create a temporary file with our config at the top
-        local temp_profile=$(mktemp)
-        cat << EOF > "$temp_profile"
-# Prevent multiple sourcing
-if [ -n "\${DOTFILES_PROFILE_LOADED:-}" ]; then
-    return 2>/dev/null || true
-fi
-DOTFILES_PROFILE_LOADED=1
-
-# start custom alias/funcs setup
-. ${HOME}/.dotfiles-shell-ext
-
-# adding bin directories to path
-export PATH="$HOME/.local/bin:$HOME/.fzf/bin:${config_dir}/bin:\$PATH"
-
-EOF
-        # Append existing .profile content if it exists
-        [[ -f "$HOME/.profile" ]] && cat "$HOME/.profile" >> "$temp_profile"
-        # Replace .profile with our new content
-        mv "$temp_profile" "$HOME/.profile"
-    else
-        log "✅ Dotfiles configuration already exists in .profile"
-    fi
-
-    # Also add to .bashrc for interactive shells (like Codespaces)
-    # Check if we're in Codespaces environment
-    if [[ -n "${CODESPACES:-}" ]]; then
-        log "🔍 Detected Codespaces environment"
-        if ! grep -q "\.profile" "$HOME/.bashrc" 2>/dev/null; then
-            log "➕ Adding .profile sourcing to .bashrc for Codespaces"
-            backup_file "$HOME/.bashrc"
-            cat << EOF >> "$HOME/.bashrc"
-
-# Source .profile for dotfiles configuration (Codespaces)
-[ -f "$HOME/.profile" ] && . "$HOME/.profile"
-EOF
-        else
-            log "✅ .bashrc already sources .profile"
-        fi
-    fi
-    log "🎉 Bootstrap setup completed successfully!"
-    log "Please start a new terminal session or run: . ~/.profile"
+    print_summary "$env_type" "$os_type"
 }
 
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+if [ "${0##*/}" = "bootstrap.sh" ]; then
     main "$@"
 fi

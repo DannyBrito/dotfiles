@@ -1,3 +1,31 @@
-alias_funcs/extra
-vars.env
+# Credentials and secrets
 cred.env
+
+# Personal/local configuration overrides
+vars.env
+
+# Legacy
+alias_funcs/extra
+
+# Backups created by bootstrap/scripts
+*.backup
+*.backup.*
+*.old
+*.orig
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

@@ -13,7 +13,7 @@ function az-who(){
 
 function az-clean(){
     echo "Running script ${config_dir}/scripts/delete-groups.sh"
-    source ${config_dir}/scripts/delete-groups.sh
+    . ${config_dir}/scripts/delete-groups.sh
 }
 
 function acr-login(){

@@ -1,5 +1,11 @@
+# CLI tools
 tree
 wget
 curl
 jq
 yq
+
+# GUI apps (casks)
+--cask rectangle
+--cask raycast
+--cask ghostty

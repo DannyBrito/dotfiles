@@ -39,8 +39,10 @@ alias cc="clear"
 alias sudo='sudo '
 
 function git-cred(){
-    if [[ -e "${config_dir}/cred.env" ]]; then
-        export $(xargs <${config_dir}/cred.env)
+    if [ -e "${config_dir}/cred.env" ]; then
+        set -a
+        . "${config_dir}/cred.env"
+        set +a
     else
         echo "no cred.env found"
     fi
@@ -48,7 +50,7 @@ function git-cred(){
 
 function disk-usage(){
     local params="$@"
-    if [[ -z $params ]]; then
+    if [ -z "$params" ]; then
         params="-h --max-depth=1 ."
     fi
     echo "Disk usage: running du $params"
@@ -62,7 +64,7 @@ function disk-usage-all(){
 
 function src-envfile(){
     local file="${1:-.env}"
-    if [[ ! -e $file ]]; then
+    if [ ! -e "$file" ]; then
         echo "file not found: $file"
         return 1
     fi
@@ -98,15 +100,16 @@ function xx(){
 }
 
 function sh-restart(){
-    exec $SHELL
+    echo "Restarting shell as login shell..."
+    exec $SHELL -l
 }
 
 # check given vs calculated
 # example: checksum 69274fd3b9e65b39e33070376400b7e31664388cdee012591fabc849bee4258e kubernetes.tar.gz
 function checksum(){
-    if [ -z "$1" || -z "$2" ]; then
+    if [ -z "$1" ] || [ -z "$2" ]; then
         echo "usage: checksum <sha-num> <file> (e.g checksum 6...e k8s.tar.gz)"
-        exit 1
+        return 1
     fi
     local given=$1
     local fileToCheck=$2
@@ -124,22 +127,21 @@ function server() {
 function tar-extract() {
     local file="${1:-src.tar.gz}"
     local dest="${2:-.}"
-    if [[ ! -e "$file" ]]; then
+    if [ ! -e "$file" ]; then
         echo "file not found: $file"
         return 1
     fi
     # Check if destination exists, create if not
-    if [[ ! -d "$dest" ]]; then
+    if [ ! -d "$dest" ]; then
         echo "Destination '$dest' does not exist. Creating..."
         mkdir -p "$dest"
     fi
     echo "Extracting tar file: $file to $dest"
     # Detect if file is gzipped
-    if [[ "$file" == *.tar.gz || "$file" == *.tgz ]]; then
-        tar -xzf "$file" -C "$dest"
-    else
-        tar -xf "$file" -C "$dest"
-    fi
+    case "$file" in
+        *.tar.gz|*.tgz) tar -xzf "$file" -C "$dest" ;;
+        *) tar -xf "$file" -C "$dest" ;;
+    esac
 }
 
 function tar-create() {
