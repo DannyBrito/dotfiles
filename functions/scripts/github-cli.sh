@@ -21,9 +21,8 @@ function gh-download-artifacts(){
     if [ -z "$outdir" ]; then
         outdir="gh-artifacts-${run_id}"
     fi
-    cmd="gh run download \"${run_id}\" -D \"${outdir}\""
-    echo "running: $cmd"
-    eval $cmd
+    echo "running: gh run download \"${run_id}\" -D \"${outdir}\""
+    gh run download "${run_id}" -D "${outdir}"
 }
 
 function gh-cancel-workflow-run(){

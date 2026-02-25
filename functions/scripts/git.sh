@@ -185,7 +185,7 @@ function gco(){
 function gamend(){
     local msg="$1"
     local signoff_flag="$(_git_should_signoff)"
-    if [ ! -z "$msg" ]; then
+    if [ -n "$msg" ]; then
         echo "Running: git commit --amend -m '$msg' $signoff_flag"
         git commit --amend -m "$msg" $signoff_flag
     else
@@ -197,7 +197,7 @@ function gamend(){
 function gamendnoverify(){
     local msg="$1"
     local signoff_flag="$(_git_should_signoff)"
-    if [ ! -z "$msg" ]; then
+    if [ -n "$msg" ]; then
         echo "Running: git commit --amend -m '$msg' --no-verify $signoff_flag"
         git commit --amend -m "$msg" --no-verify $signoff_flag
     else

@@ -24,7 +24,7 @@ fi
 
 export VSCODE_IPC_HOOK_CLI="${socket}"
 if [ -z "${1:-}" ]; then
-    ${script} .
+    "${script}" .
 else
-    ${script} $@
+    "${script}" "$@"
 fi
