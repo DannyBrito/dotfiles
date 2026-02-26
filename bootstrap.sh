@@ -154,34 +154,51 @@ export PATH=\"\$HOME/.local/bin:\$HOME/.fzf/bin:${config_dir}/bin:\$PATH\"
 "
     prepend_to_file_if_missing "$HOME/.profile" "DOTFILES_PROFILE_LOADED" "$profile_content"
 
-    # Handle shell-specific startup files
-    local startup_file
-    startup_file="$(get_startup_file_path)"
-
-    if [ "$startup_file" != "$HOME/.profile" ]; then
-        local source_profile="
+    # Source .profile content snippet (used for all shell startup files)
+    local source_profile_snippet="
 # Source .profile for dotfiles configuration
 [ -f \"\$HOME/.profile\" ] && . \"\$HOME/.profile\"
 "
-        add_to_file_if_missing "$startup_file" ".profile" "$source_profile"
-    fi
 
-    # Environment-specific setup
+    # Configure shell-specific startup files
+    # Both login shell file AND interactive shell file need to source .profile
+    case "$shell_type" in
+        zsh)
+            # zsh: .zprofile (login) and .zshrc (interactive)
+            # Ensure files exist before adding
+            [ ! -f "$HOME/.zprofile" ] && touch "$HOME/.zprofile"
+            [ ! -f "$HOME/.zshrc" ] && touch "$HOME/.zshrc"
+            add_to_file_if_missing "$HOME/.zprofile" ".profile" "$source_profile_snippet"
+            add_to_file_if_missing "$HOME/.zshrc" ".profile" "$source_profile_snippet"
+            ;;
+        bash)
+            # bash: .bash_profile (login) and .bashrc (interactive)
+            # Ensure files exist before adding
+            [ ! -f "$HOME/.bash_profile" ] && touch "$HOME/.bash_profile"
+            [ ! -f "$HOME/.bashrc" ] && touch "$HOME/.bashrc"
+            add_to_file_if_missing "$HOME/.bash_profile" ".profile" "$source_profile_snippet"
+            add_to_file_if_missing "$HOME/.bashrc" ".profile" "$source_profile_snippet"
+            ;;
+        *)
+            # For other shells, try to add to .profile itself or common files
+            log "  ⚠ Unknown shell type: $shell_type - using .profile only"
+            ;;
+    esac
+
+    # Environment-specific additional setup
     case "$env_type" in
         codespaces|gitpod|docker)
-            # These environments often use .bashrc for interactive shells
-            if [ -f "$HOME/.bashrc" ] || [ "$env_type" = "codespaces" ]; then
-                local bashrc_content="
-# Source .profile for dotfiles configuration ($env_type)
-[ -f \"\$HOME/.profile\" ] && . \"\$HOME/.profile\"
-"
-                add_to_file_if_missing "$HOME/.bashrc" ".profile" "$bashrc_content"
-            fi
+            # These environments often use .bashrc even for login shells
+            # Ensure .bashrc sources .profile regardless of detected shell
+            [ ! -f "$HOME/.bashrc" ] && touch "$HOME/.bashrc"
+            add_to_file_if_missing "$HOME/.bashrc" ".profile" "$source_profile_snippet"
             ;;
         wsl)
             # WSL may need both .bashrc and .zshrc
-            if [ -f "$HOME/.bashrc" ]; then
-                add_to_file_if_missing "$HOME/.bashrc" ".profile" "[ -f \"\$HOME/.profile\" ] && . \"\$HOME/.profile\""
+            [ ! -f "$HOME/.bashrc" ] && touch "$HOME/.bashrc"
+            add_to_file_if_missing "$HOME/.bashrc" ".profile" "$source_profile_snippet"
+            if [ -f "$HOME/.zshrc" ]; then
+                add_to_file_if_missing "$HOME/.zshrc" ".profile" "$source_profile_snippet"
             fi
             ;;
     esac

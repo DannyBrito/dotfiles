@@ -30,20 +30,32 @@ if [ ! -L "$HOME/.config/starship.no-font.toml" ]; then
     ln -s "$PWD/tools/starship/starship.no-font.toml" "$HOME/.config/starship.no-font.toml" 2>/dev/null || true
 fi
 
-# Only add to profile if not already present
-pth="$(get_startup_file_path)"
+# Add starship init to interactive shell config (must be .zshrc/.bashrc, not .profile)
+# The eval generates shell-specific code that won't work in POSIX .profile
+pth="$(get_interactive_shell_config)"
+shell_type="$(get_shell_type)"
 marker="starship init"
 
-if grep -q "$marker" "$pth" 2>/dev/null; then
-    echo "starship already configured in $pth"
+# Skip if unknown shell (can't generate proper init)
+if [ -z "$pth" ]; then
+    echo "Unknown shell type '$shell_type' - skipping starship init setup"
+    echo "To enable starship, manually add to your shell config:"
+    echo "  eval \"\$(starship init YOUR_SHELL)\""
 else
-    cat << EOF >> "$pth"
+    # Ensure the file exists
+    [ ! -f "$pth" ] && touch "$pth"
+
+    if grep -q "$marker" "$pth" 2>/dev/null; then
+        echo "starship already configured in $pth"
+    else
+        cat << EOF >> "$pth"
 
 # Starship Setup
-eval "\$(starship init $(get_shell_type))"
+eval "\$(starship init $shell_type)"
 
 EOF
-    echo "Added starship init to $pth"
+        echo "Added starship init to $pth"
+    fi
 fi
 
 echo "starship - setup completed!"
