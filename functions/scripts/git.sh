@@ -40,8 +40,44 @@ function ggonels(){
 }
 
 function ggonedelete(){
-    ggonels | awk '{print $1}' | xargs git branch -D
+    local gone_lines=$(ggonels)
+    if [ -z "$gone_lines" ]; then
+        echo "No gone branches found"
+        return 0
+    fi
+
+    echo "$gone_lines" | while read -r line; do
+        local is_worktree=false
+        case "$line" in
+            +*) is_worktree=true ;;
+        esac
+
+        local branch=$(echo "$line" | awk '{print $1}' | sed 's/^+//')
+
+        if $is_worktree; then
+            # Find and remove the worktree first
+            local wt_path=$(git worktree list --porcelain | awk -v b="refs/heads/$branch" '
+                /^worktree / { wt = substr($0, 10) }
+                /^branch /   { if (substr($0, 8) == b) print wt }
+            ')
+            echo -n "Removing worktree + branch: $branch... "
+            if [ -n "$wt_path" ] && git worktree remove --force "$wt_path" 2>/dev/null && git branch -D "$branch" 2>/dev/null; then
+                echo "OK"
+            else
+                echo "FAILED"
+            fi
+        else
+            echo -n "Deleting branch: $branch... "
+            if git branch -D "$branch" 2>/dev/null; then
+                echo "OK"
+            else
+                echo "FAILED"
+            fi
+        fi
+    done
+    git worktree prune 2>/dev/null
 }
+
 function gfetch (){
     local remote="${1:-origin}"
     echo "Running: git fetch $remote"
