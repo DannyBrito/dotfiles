@@ -63,16 +63,16 @@ function install-syft(){
 }
 
 function install-golang(){
-    local version="${1:-1.20.5}"
+    local version="${1:-1.26.2}"
     local os_arch="$(_get_os_arch)"
     local os="${os_arch%%_*}"
     local arch="${os_arch##*_}"
     echo "Installing golang: ${version} for ${os}/${arch}"
     curl -sL "https://go.dev/dl/go${version}.${os}-${arch}.tar.gz" > golang.tar.gz
-    rm -rf /usr/local/go && tar -C /usr/local -xzf golang.tar.gz
+    sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf golang.tar.gz
     rm -rf golang.tar.gz
     echo "Running: go version"
-    go version
+    /usr/local/go/bin/go version
 }
 
 function install-kubectl(){
