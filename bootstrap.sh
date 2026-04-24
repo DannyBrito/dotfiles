@@ -112,12 +112,16 @@ setup_symlinks() {
     safe_symlink "$DOTFILES_DIR/.dotfiles-shell-ext" "$HOME/.dotfiles-shell-ext"
     safe_symlink "$DOTFILES_DIR/vars.env" "$config_dir/vars.env"
     safe_symlink "$DOTFILES_DIR/cred.env" "$config_dir/cred.env"
+    safe_symlink "$DOTFILES_DIR/project_refs.txt" "$config_dir/project_refs.txt"
+    safe_symlink "$DOTFILES_DIR/registries.txt" "$config_dir/registries.txt"
 }
 
 setup_environment_files() {
     log "📝 Setting up environment files..."
     [ ! -e "$DOTFILES_DIR/vars.env" ] && touch "$DOTFILES_DIR/vars.env" && log "  + vars.env"
     [ ! -e "$DOTFILES_DIR/cred.env" ] && touch "$DOTFILES_DIR/cred.env" && log "  + cred.env"
+    [ ! -e "$DOTFILES_DIR/project_refs.txt" ] && touch "$DOTFILES_DIR/project_refs.txt" && log "  + project_refs.txt"
+    [ ! -e "$DOTFILES_DIR/registries.txt" ] && touch "$DOTFILES_DIR/registries.txt" && log "  + registries.txt"
 
     if [ ! -e "$DOTFILES_DIR/functions/scripts/extra/extra" ]; then
         mkdir -p "$DOTFILES_DIR/functions/scripts/extra"
