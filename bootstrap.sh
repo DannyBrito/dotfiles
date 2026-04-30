@@ -110,6 +110,7 @@ setup_symlinks() {
     safe_symlink "$DOTFILES_DIR/bin" "$config_dir/bin"
     safe_symlink "$DOTFILES_DIR/tools" "$config_dir/tools"
     safe_symlink "$DOTFILES_DIR/.dotfiles-shell-ext" "$HOME/.dotfiles-shell-ext"
+    safe_symlink "$DOTFILES_DIR/tools/vim/.vimrc" "$HOME/.vimrc"
     safe_symlink "$DOTFILES_DIR/vars.env" "$config_dir/vars.env"
     safe_symlink "$DOTFILES_DIR/cred.env" "$config_dir/cred.env"
     safe_symlink "$DOTFILES_DIR/project_refs.txt" "$config_dir/project_refs.txt"
@@ -208,6 +209,22 @@ export PATH=\"\$HOME/.local/bin:\$HOME/.fzf/bin:${config_dir}/bin:\$PATH\"
     esac
 }
 
+setup_git_config() {
+    log "🔧 Configuring git..."
+
+    # Default branch name
+    git config --global init.defaultBranch main
+    log "  ✓ init.defaultBranch = main"
+
+    # Editor
+    git config --global core.editor vim
+    log "  ✓ core.editor = vim"
+
+    # Require user.name and user.email to be set per repo
+    git config --global user.useConfigOnly true
+    log "  ✓ user.useConfigOnly = true (requires name/email per repo)"
+}
+
 print_summary() {
     local env_type="$1"
     local os_type="$2"
@@ -223,9 +240,46 @@ print_summary() {
     log "   • Optional: Run ./install-tools.sh to install fzf, starship, etc."
 }
 
+show_usage() {
+    cat <<EOF
+Usage: ./bootstrap.sh [OPTIONS]
+
+Options:
+    --macos       Apply macOS settings without prompting
+    --no-macos    Skip macOS settings without prompting
+    -h, --help    Show this help message
+
+Without flags, macOS settings will prompt for confirmation.
+EOF
+}
+
 main() {
     local env_type
     local os_type
+    local macos_mode=""
+
+    # Parse arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --macos)
+                macos_mode="auto"
+                ;;
+            --no-macos)
+                macos_mode="skip"
+                ;;
+            -h|--help)
+                show_usage
+                exit 0
+                ;;
+            *)
+                log "Unknown option: $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
     env_type="$(detect_env)"
     os_type="$(detect_os)"
 
@@ -245,6 +299,14 @@ main() {
     setup_environment_files
     setup_symlinks "$config_dir"
     setup_shell_profile "$config_dir" "$env_type"
+    setup_git_config
+
+    # macOS-specific settings
+    if [ "$os_type" = "macos" ]; then
+        # shellcheck source=./macos/essentials.sh
+        . "$DOTFILES_DIR/macos/essentials.sh"
+        setup_macos_essentials "$macos_mode"
+    fi
 
     print_summary "$env_type" "$os_type"
 }

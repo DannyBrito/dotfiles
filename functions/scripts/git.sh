@@ -342,3 +342,113 @@ elif [ -n "$ZSH_VERSION" ]; then
     }
     compdef _gitremotes_completion gfr gfpr gfp gfetch
 fi
+
+# =============================================================================
+# Git Worktree Helpers (generic)
+# =============================================================================
+
+# Get the worktrees directory path for the current repo
+# Works from main repo or any worktree
+_gwt_dir() {
+    local repo_name main_repo_path git_common_dir
+
+    main_repo_path="$(git rev-parse --show-toplevel 2>/dev/null)" || return 1
+
+    # If we're in a worktree, find the main repo path
+    git_common_dir="$(git rev-parse --git-common-dir 2>/dev/null)"
+    if [ -n "$git_common_dir" ] && [ "$git_common_dir" != ".git" ]; then
+        main_repo_path="$(dirname "$(realpath "$git_common_dir")")"
+    fi
+
+    repo_name="$(basename "$main_repo_path")"
+    echo "$main_repo_path/../${repo_name}-worktrees"
+}
+
+# Create a new worktree with a new branch
+# Usage: gwt-new <branch-name> [base-branch]
+gwt-new() {
+    local branch="$1"
+    local base="${2:-main}"
+    local wt_dir
+
+    if [ -z "$branch" ]; then
+        echo "Usage: gwt-new <branch-name> [base-branch]"
+        echo "  Creates a new worktree with a new branch"
+        return 1
+    fi
+
+    wt_dir="$(_gwt_dir)/$branch"
+
+    # Ensure worktrees directory exists
+    mkdir -p "$(_gwt_dir)"
+
+    echo "Creating worktree: $wt_dir"
+    echo "  Branch: $branch (from $base)"
+
+    git worktree add -b "$branch" "$wt_dir" "$base" || return 1
+
+    echo ""
+    echo "To enter: cd \"$wt_dir\""
+}
+
+# Add a worktree for an existing branch
+# Usage: gwt-add <branch-name>
+gwt-add() {
+    local branch="$1"
+    local wt_dir
+
+    if [ -z "$branch" ]; then
+        echo "Usage: gwt-add <branch-name>"
+        echo "  Creates a worktree for an existing branch"
+        return 1
+    fi
+
+    wt_dir="$(_gwt_dir)/$branch"
+
+    # Ensure worktrees directory exists
+    mkdir -p "$(_gwt_dir)"
+
+    echo "Creating worktree: $wt_dir"
+    echo "  Branch: $branch"
+
+    git worktree add "$wt_dir" "$branch" || return 1
+
+    echo ""
+    echo "To enter: cd \"$wt_dir\""
+}
+
+# List all worktrees
+# Usage: gwt-list
+gwt-list() {
+    git worktree list
+}
+
+# Remove a worktree
+# Usage: gwt-remove <branch-name-or-path>
+gwt-remove() {
+    local branch="$1"
+    local wt_dir
+
+    if [ -z "$branch" ]; then
+        echo "Usage: gwt-remove <branch-name-or-path>"
+        echo "  Removes a worktree"
+        return 1
+    fi
+
+    # If it looks like a path, use it directly
+    if [ -d "$branch" ]; then
+        wt_dir="$branch"
+    else
+        wt_dir="$(_gwt_dir)/$branch"
+    fi
+
+    echo "Removing worktree: $wt_dir"
+    git worktree remove "$wt_dir"
+}
+
+# Prune stale worktree references
+# Usage: gwt-prune
+gwt-prune() {
+    echo "Pruning stale worktree references..."
+    git worktree prune -v
+}
