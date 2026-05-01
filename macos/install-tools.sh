@@ -3,6 +3,7 @@ set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TOOLS_FILE="$SCRIPT_DIR/tools.txt"
+VERSION_LOG="$SCRIPT_DIR/.upgrade-log.txt"
 
 # Check for Homebrew
 if ! command -v brew >/dev/null 2>&1; then
@@ -12,6 +13,19 @@ fi
 
 # Disable auto-updates to avoid prompts
 export HOMEBREW_NO_AUTO_UPDATE=1
+
+# Log version before upgrade
+log_version() {
+  local name="$1"
+  local type="$2"  # formula or cask
+  local version
+  if [ "$type" = "cask" ]; then
+    version="$(brew list --cask --versions "$name" 2>/dev/null | awk '{print $2}' || echo "unknown")"
+  else
+    version="$(brew list --versions "$name" 2>/dev/null | awk '{print $2}' || echo "unknown")"
+  fi
+  echo "$(date '+%Y-%m-%d %H:%M:%S') | $type | $name | $version -> upgrade" >> "$VERSION_LOG"
+}
 
 echo "Processing tools..."
 
@@ -41,6 +55,7 @@ while IFS= read -r pkg || [ -n "$pkg" ]; do
     if brew list --cask "$cask_name" >/dev/null 2>&1; then
       outdated_cask="$(brew outdated --cask "$cask_name" 2>/dev/null || true)"
       if [ -n "$outdated_cask" ]; then
+        log_version "$cask_name" "cask"
         echo "Upgrading cask: $cask_name"
         brew upgrade --cask "$cask_name" </dev/null
       else
@@ -55,6 +70,7 @@ while IFS= read -r pkg || [ -n "$pkg" ]; do
     if brew list --formula "$pkg" >/dev/null 2>&1; then
       outdated_formula="$(brew outdated --formula "$pkg" 2>/dev/null || true)"
       if [ -n "$outdated_formula" ]; then
+        log_version "$pkg" "formula"
         echo "Upgrading: $pkg"
         brew upgrade "$pkg" </dev/null
       else

@@ -29,3 +29,6 @@ alias_funcs/extra
 *.tmp
 *.temp
 .cache/
+
+project_refs.txt
+registries.txt

@@ -110,14 +110,19 @@ setup_symlinks() {
     safe_symlink "$DOTFILES_DIR/bin" "$config_dir/bin"
     safe_symlink "$DOTFILES_DIR/tools" "$config_dir/tools"
     safe_symlink "$DOTFILES_DIR/.dotfiles-shell-ext" "$HOME/.dotfiles-shell-ext"
+    safe_symlink "$DOTFILES_DIR/tools/vim/.vimrc" "$HOME/.vimrc"
     safe_symlink "$DOTFILES_DIR/vars.env" "$config_dir/vars.env"
     safe_symlink "$DOTFILES_DIR/cred.env" "$config_dir/cred.env"
+    safe_symlink "$DOTFILES_DIR/project_refs.txt" "$config_dir/project_refs.txt"
+    safe_symlink "$DOTFILES_DIR/registries.txt" "$config_dir/registries.txt"
 }
 
 setup_environment_files() {
     log "📝 Setting up environment files..."
     [ ! -e "$DOTFILES_DIR/vars.env" ] && touch "$DOTFILES_DIR/vars.env" && log "  + vars.env"
     [ ! -e "$DOTFILES_DIR/cred.env" ] && touch "$DOTFILES_DIR/cred.env" && log "  + cred.env"
+    [ ! -e "$DOTFILES_DIR/project_refs.txt" ] && touch "$DOTFILES_DIR/project_refs.txt" && log "  + project_refs.txt"
+    [ ! -e "$DOTFILES_DIR/registries.txt" ] && touch "$DOTFILES_DIR/registries.txt" && log "  + registries.txt"
 
     if [ ! -e "$DOTFILES_DIR/functions/scripts/extra/extra" ]; then
         mkdir -p "$DOTFILES_DIR/functions/scripts/extra"
@@ -154,37 +159,70 @@ export PATH=\"\$HOME/.local/bin:\$HOME/.fzf/bin:${config_dir}/bin:\$PATH\"
 "
     prepend_to_file_if_missing "$HOME/.profile" "DOTFILES_PROFILE_LOADED" "$profile_content"
 
-    # Handle shell-specific startup files
-    local startup_file
-    startup_file="$(get_startup_file_path)"
-
-    if [ "$startup_file" != "$HOME/.profile" ]; then
-        local source_profile="
+    # Source .profile content snippet (used for all shell startup files)
+    local source_profile_snippet="
 # Source .profile for dotfiles configuration
 [ -f \"\$HOME/.profile\" ] && . \"\$HOME/.profile\"
 "
-        add_to_file_if_missing "$startup_file" ".profile" "$source_profile"
-    fi
 
-    # Environment-specific setup
+    # Configure shell-specific startup files
+    # Both login shell file AND interactive shell file need to source .profile
+    case "$shell_type" in
+        zsh)
+            # zsh: .zprofile (login) and .zshrc (interactive)
+            # Ensure files exist before adding
+            [ ! -f "$HOME/.zprofile" ] && touch "$HOME/.zprofile"
+            [ ! -f "$HOME/.zshrc" ] && touch "$HOME/.zshrc"
+            add_to_file_if_missing "$HOME/.zprofile" ".profile" "$source_profile_snippet"
+            add_to_file_if_missing "$HOME/.zshrc" ".profile" "$source_profile_snippet"
+            ;;
+        bash)
+            # bash: .bash_profile (login) and .bashrc (interactive)
+            # Ensure files exist before adding
+            [ ! -f "$HOME/.bash_profile" ] && touch "$HOME/.bash_profile"
+            [ ! -f "$HOME/.bashrc" ] && touch "$HOME/.bashrc"
+            add_to_file_if_missing "$HOME/.bash_profile" ".profile" "$source_profile_snippet"
+            add_to_file_if_missing "$HOME/.bashrc" ".profile" "$source_profile_snippet"
+            ;;
+        *)
+            # For other shells, try to add to .profile itself or common files
+            log "  ⚠ Unknown shell type: $shell_type - using .profile only"
+            ;;
+    esac
+
+    # Environment-specific additional setup
     case "$env_type" in
         codespaces|gitpod|docker)
-            # These environments often use .bashrc for interactive shells
-            if [ -f "$HOME/.bashrc" ] || [ "$env_type" = "codespaces" ]; then
-                local bashrc_content="
-# Source .profile for dotfiles configuration ($env_type)
-[ -f \"\$HOME/.profile\" ] && . \"\$HOME/.profile\"
-"
-                add_to_file_if_missing "$HOME/.bashrc" ".profile" "$bashrc_content"
-            fi
+            # These environments often use .bashrc even for login shells
+            # Ensure .bashrc sources .profile regardless of detected shell
+            [ ! -f "$HOME/.bashrc" ] && touch "$HOME/.bashrc"
+            add_to_file_if_missing "$HOME/.bashrc" ".profile" "$source_profile_snippet"
             ;;
         wsl)
             # WSL may need both .bashrc and .zshrc
-            if [ -f "$HOME/.bashrc" ]; then
-                add_to_file_if_missing "$HOME/.bashrc" ".profile" "[ -f \"\$HOME/.profile\" ] && . \"\$HOME/.profile\""
+            [ ! -f "$HOME/.bashrc" ] && touch "$HOME/.bashrc"
+            add_to_file_if_missing "$HOME/.bashrc" ".profile" "$source_profile_snippet"
+            if [ -f "$HOME/.zshrc" ]; then
+                add_to_file_if_missing "$HOME/.zshrc" ".profile" "$source_profile_snippet"
             fi
             ;;
     esac
+}
+
+setup_git_config() {
+    log "🔧 Configuring git..."
+
+    # Default branch name
+    git config --global init.defaultBranch main
+    log "  ✓ init.defaultBranch = main"
+
+    # Editor
+    git config --global core.editor vim
+    log "  ✓ core.editor = vim"
+
+    # Require user.name and user.email to be set per repo
+    git config --global user.useConfigOnly true
+    log "  ✓ user.useConfigOnly = true (requires name/email per repo)"
 }
 
 print_summary() {
@@ -202,9 +240,46 @@ print_summary() {
     log "   • Optional: Run ./install-tools.sh to install fzf, starship, etc."
 }
 
+show_usage() {
+    cat <<EOF
+Usage: ./bootstrap.sh [OPTIONS]
+
+Options:
+    --macos       Apply macOS settings without prompting
+    --no-macos    Skip macOS settings without prompting
+    -h, --help    Show this help message
+
+Without flags, macOS settings will prompt for confirmation.
+EOF
+}
+
 main() {
     local env_type
     local os_type
+    local macos_mode=""
+
+    # Parse arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --macos)
+                macos_mode="auto"
+                ;;
+            --no-macos)
+                macos_mode="skip"
+                ;;
+            -h|--help)
+                show_usage
+                exit 0
+                ;;
+            *)
+                log "Unknown option: $1"
+                show_usage
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
     env_type="$(detect_env)"
     os_type="$(detect_os)"
 
@@ -224,6 +299,14 @@ main() {
     setup_environment_files
     setup_symlinks "$config_dir"
     setup_shell_profile "$config_dir" "$env_type"
+    setup_git_config
+
+    # macOS-specific settings
+    if [ "$os_type" = "macos" ]; then
+        # shellcheck source=./macos/essentials.sh
+        . "$DOTFILES_DIR/macos/essentials.sh"
+        setup_macos_essentials "$macos_mode"
+    fi
 
     print_summary "$env_type" "$os_type"
 }

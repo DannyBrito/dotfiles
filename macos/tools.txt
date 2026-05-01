@@ -4,6 +4,10 @@ wget
 curl
 jq
 yq
+tmux
+gh
+fzf
+rsync
 
 # GUI apps (casks)
 --cask rectangle

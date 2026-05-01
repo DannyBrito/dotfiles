@@ -59,7 +59,7 @@ for file in $alias_scripts_dir/*; do
 done
 
 for file in $alias_scripts_dir/extra/*; do
-	[ -r "$file" ] && [ -f "$file" ] && . "$file";
+	[ -r "$file" ] && { [ -f "$file" ] || [ -L "$file" ]; } && . "$file";
 done
 
 if [ "${TERM_PROGRAM:-}" = "Apple_Terminal" ]; then

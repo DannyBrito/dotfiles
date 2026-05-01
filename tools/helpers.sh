@@ -5,17 +5,27 @@ set -eu
 # Note: This file must be standalone - detect.sh is set up by bootstrap later
 
 get_shell_type() {
-    # Detect the actual running shell, not just $SHELL
-    if [ -n "${ZSH_VERSION:-}" ]; then
-        echo "zsh"
-    elif [ -n "${BASH_VERSION:-}" ]; then
-        echo "bash"
-    elif [ -n "${FISH_VERSION:-}" ]; then
-        echo "fish"
-    else
-        # Fallback to $SHELL
-        basename "${SHELL:-sh}"
-    fi
+    # Detect the user's default shell from $SHELL env var
+    # Note: When running as /bin/sh script, ZSH_VERSION/BASH_VERSION won't be set
+    # So we primarily rely on $SHELL which reflects the user's login shell
+    local user_shell
+    user_shell="$(basename "${SHELL:-sh}")"
+
+    case "$user_shell" in
+        zsh|bash|fish) echo "$user_shell" ;;
+        *)
+            # Fallback: check running shell version vars (for interactive use)
+            if [ -n "${ZSH_VERSION:-}" ]; then
+                echo "zsh"
+            elif [ -n "${BASH_VERSION:-}" ]; then
+                echo "bash"
+            elif [ -n "${FISH_VERSION:-}" ]; then
+                echo "fish"
+            else
+                echo "sh"
+            fi
+            ;;
+    esac
 }
 
 get_startup_file_path() {
@@ -34,6 +44,20 @@ get_startup_file_path() {
     else
         echo "$HOME/.profile"
     fi
+}
+
+# Get interactive shell config file (.zshrc, .bashrc)
+# Use this for evals, prompts, aliases - things that need shell-specific syntax
+# Returns empty string for unknown shells (caller should handle this)
+get_interactive_shell_config() {
+    local shell_type
+    shell_type="$(get_shell_type)"
+
+    case "$shell_type" in
+        zsh)  echo "$HOME/.zshrc" ;;
+        bash) echo "$HOME/.bashrc" ;;
+        *)    echo "" ;;  # Unknown shell - caller must handle
+    esac
 }
 
 # Check if command exists

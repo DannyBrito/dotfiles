@@ -10,6 +10,9 @@ echo "Installing starship..."
 echo "Installing fzf..."
 "$SCRIPT_DIR/tools/fzf/install.sh"
 
+echo "Installing tmux..."
+"$SCRIPT_DIR/tools/tmux/install.sh"
+
 # Skip bcat installation if SKIP_BCAT is set (useful for containers)
 if [ -n "${SKIP_BCAT:-}" ]; then
     echo "Skipping bcat installation (SKIP_BCAT is set)"

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Opens GitHub PR creation page, auto-selecting remote: upstream > origin > only-one > fail
+set -e
+
+remotes=($(git remote))
+branch=$(git branch --show-current)
+
+if [[ ${#remotes[@]} -eq 0 ]]; then
+    echo "No remotes found" >&2
+    exit 1
+elif [[ ${#remotes[@]} -eq 1 ]]; then
+    # Single remote - just open PR creation
+    gh pr create --web
+elif git remote get-url upstream &>/dev/null && git remote get-url origin &>/dev/null; then
+    # Fork workflow: origin is fork, upstream is target
+    # Get origin owner (the fork)
+    origin_url=$(git remote get-url origin)
+    fork_owner=$(echo "$origin_url" | sed -E 's|.*[:/]([^/]+)/[^/]+(.git)?$|\1|')
+    gh pr create --web -R "$(git remote get-url upstream)" --head "${fork_owner}:${branch}"
+elif git remote get-url upstream &>/dev/null; then
+    gh pr create --web -R "$(git remote get-url upstream)"
+elif git remote get-url origin &>/dev/null; then
+    gh pr create --web -R "$(git remote get-url origin)"
+else
+    echo "Multiple remotes found but no 'upstream' or 'origin'" >&2
+    exit 1
+fi

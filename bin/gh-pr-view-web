@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Opens the PR associated with the current branch in the browser
+exec gh pr view --web

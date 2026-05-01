@@ -48,6 +48,38 @@ function dccls(){
     docker container ls -a
 }
 
+# Container registry management
+function cr-set(){
+    echo "[before] registry: '$cr'"
+    if [ -n "$1" ]; then
+        export cr="$1"
+    else
+        sleep 1
+        export cr="$(cat ${config_dir}/${registries_txt} | fzf)"
+    fi
+    echo "[after] registry: '$cr'"
+}
+
+function cr-unset(){
+    unset cr
+}
+
+# AUTOCOMPLETE FUNCTIONS for cr-set
+if [ -n "$BASH_VERSION" ]; then
+    function _cr-set_completion(){
+        local paths_file="${config_dir}/${registries_txt}"
+        local cur=${COMP_WORDS[COMP_CWORD]}
+        COMPREPLY=($(cat "$paths_file" | grep "^$cur"))
+    }
+    complete -F _cr-set_completion cr-set
+elif [ -n "$ZSH_VERSION" ]; then
+    function _cr-set_completion(){
+        local paths_file="${config_dir}/${registries_txt}"
+        compadd $(cat "$paths_file")
+    }
+    compdef _cr-set_completion cr-set
+fi
+
 function dcils(){
     echo "Running: docker image ls -a"
     docker image ls -a
