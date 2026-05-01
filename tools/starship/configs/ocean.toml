@@ -1,0 +1,55 @@
+# Ocean theme - blue/cyan palette, calming
+# Good for: dark terminals, focused work
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_status\
+$line_break\
+$character"""
+
+add_newline = true
+palette = 'ocean'
+
+[palettes.ocean]
+ocean_dark = '#1a3a4a'
+ocean_mid = '#2d7d9a'
+ocean_light = '#5fb4b4'
+ocean_foam = '#c5e4e7'
+coral = '#f97583'
+
+[character]
+success_symbol = '[❯](bold ocean_light)'
+error_symbol = '[❯](bold coral)'
+
+[username]
+show_always = true
+format = '[$user]($style) '
+style_user = 'bold ocean_light'
+style_root = 'bold coral'
+
+[hostname]
+ssh_only = true
+format = 'on [$hostname]($style) '
+style = 'bold ocean_mid'
+
+[directory]
+format = '[$path]($style) '
+style = 'bold ocean_foam'
+truncation_length = 2
+
+[git_branch]
+format = '[$symbol$branch]($style) '
+symbol = '⎇ '
+style = 'bold ocean_mid'
+
+[git_status]
+format = '[$all_status$ahead_behind]($style)'
+style = 'ocean_light'
+
+[line_break]
+disabled = false

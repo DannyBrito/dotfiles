@@ -1,0 +1,28 @@
+# Pastel - soft colors, easy on the eyes
+# Good for: long coding sessions, light/dark terminals
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """
+$directory$git_branch$git_status
+$character"""
+
+add_newline = true
+
+[character]
+success_symbol = '[➜](bold #a6da95)'
+error_symbol = '[➜](bold #ed8796)'
+
+[directory]
+format = '[$path]($style) '
+style = '#8aadf4'
+truncation_length = 2
+
+[git_branch]
+format = '[$symbol$branch]($style) '
+symbol = ''
+style = '#c6a0f6'
+
+[git_status]
+format = '[$all_status$ahead_behind]($style)'
+style = '#f5a97f'

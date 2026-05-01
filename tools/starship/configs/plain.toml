@@ -1,0 +1,27 @@
+# Plain - no colors, ASCII only
+# Good for: TTY, logging, CI, piping output, accessibility
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = '$username$hostname$directory$git_branch$character'
+add_newline = false
+
+[character]
+success_symbol = '> '
+error_symbol = '> '
+
+[username]
+show_always = true
+format = '$user '
+
+[hostname]
+ssh_only = true
+format = '@$hostname '
+
+[directory]
+format = '$path '
+truncation_length = 2
+
+[git_branch]
+format = '($branch) '
+symbol = ''

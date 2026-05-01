@@ -1,61 +1,58 @@
 #!/bin/sh
 set -e
 
-. "$PWD/tools/helpers.sh"
+# Install starship binary and optionally fonts
+# Adds starship init to shell config
 
-# Install font:
-"$PWD/tools/starship/install-font.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DOTFILES_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+. "$DOTFILES_DIR/tools/helpers.sh"
+
+# Install font (optional, for "full" style)
+if [ "${1:-}" = "--with-font" ] || [ "${1:-}" = "-f" ]; then
+    "$SCRIPT_DIR/install-font.sh"
+fi
 
 # Install starship if not present
 if command -v starship >/dev/null 2>&1; then
-    echo "starship is already installed, skipping binary install"
+    echo "starship is already installed"
 else
+    echo "Installing starship..."
     mkdir -p "$HOME/.local/bin"
     curl -sS https://starship.rs/install.sh | sh -s -- --yes --bin-dir "$HOME/.local/bin"
 fi
 
-mkdir -p "$HOME/.config"
-
-# Setup starship config (idempotent)
-if [ -L "$HOME/.config/starship.toml" ]; then
-    echo "starship.toml already linked"
-elif [ -e "$HOME/.config/starship.toml" ]; then
-    mv "$HOME/.config/starship.toml" "$HOME/.config/starship.old.toml"
-    ln -s "$PWD/tools/starship/starship.toml" "$HOME/.config/starship.toml"
-else
-    ln -s "$PWD/tools/starship/starship.toml" "$HOME/.config/starship.toml"
-fi
-
-if [ ! -L "$HOME/.config/starship.no-font.toml" ]; then
-    ln -s "$PWD/tools/starship/starship.no-font.toml" "$HOME/.config/starship.no-font.toml" 2>/dev/null || true
-fi
-
-# Add starship init to interactive shell config (must be .zshrc/.bashrc, not .profile)
-# The eval generates shell-specific code that won't work in POSIX .profile
-pth="$(get_interactive_shell_config)"
+# Add starship init to shell config
 shell_type="$(get_shell_type)"
+shell_config="$(get_interactive_shell_config)"
 marker="starship init"
 
-# Skip if unknown shell (can't generate proper init)
-if [ -z "$pth" ]; then
+if [ -z "$shell_config" ]; then
     echo "Unknown shell type '$shell_type' - skipping starship init setup"
-    echo "To enable starship, manually add to your shell config:"
-    echo "  eval \"\$(starship init YOUR_SHELL)\""
+    echo "Manually add to your shell config: eval \"\$(starship init YOUR_SHELL)\""
 else
-    # Ensure the file exists
-    [ ! -f "$pth" ] && touch "$pth"
+    [ ! -f "$shell_config" ] && touch "$shell_config"
 
-    if grep -q "$marker" "$pth" 2>/dev/null; then
-        echo "starship already configured in $pth"
+    if grep -q "$marker" "$shell_config" 2>/dev/null; then
+        echo "starship init already in $shell_config"
     else
-        cat << EOF >> "$pth"
+        cat << EOF >> "$shell_config"
 
-# Starship Setup
+# Starship prompt
 eval "\$(starship init $shell_type)"
-
 EOF
-        echo "Added starship init to $pth"
+        echo "Added starship init to $shell_config"
     fi
 fi
 
-echo "starship - setup completed!"
+echo ""
+echo "starship installed!"
+echo ""
+echo "Prompt styles are managed via: prompt-style"
+echo "  prompt-style          # fzf picker"
+echo "  prompt-style full     # with nerd fonts"
+echo "  prompt-style minimal  # no special fonts"
+echo "  prompt-style off      # fallback prompt"
+echo ""
+echo "To install fonts for 'full' style: $SCRIPT_DIR/install-font.sh"

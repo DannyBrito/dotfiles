@@ -1,0 +1,21 @@
+# Compact - single line, minimal footprint
+# Good for: small terminals, split panes, tmux
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = '$directory$git_branch$character'
+add_newline = false
+
+[character]
+success_symbol = '[›](green)'
+error_symbol = '[›](red)'
+
+[directory]
+format = '[$path]($style)'
+style = 'cyan'
+truncation_length = 1
+truncate_to_repo = true
+
+[git_branch]
+format = ' [$branch]($style)'
+style = 'purple'

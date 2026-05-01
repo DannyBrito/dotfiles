@@ -1,0 +1,71 @@
+# Dev - developer info (languages, tools, docker)
+# Good for: polyglot projects, debugging env issues
+
+"$schema" = 'https://starship.rs/config-schema.json'
+
+format = """$username$hostname$directory $git_branch$git_status$git_state
+$python$nodejs$rust$golang$docker_context$cmd_duration
+$character"""
+
+add_newline = false
+
+[character]
+success_symbol = '[➜](bold green)'
+error_symbol = '[➜](bold red)'
+
+[username]
+show_always = true
+format = '[$user]($style)'
+style_user = 'green bold'
+
+[hostname]
+ssh_only = true
+format = '@[$hostname]($style) '
+style = 'yellow bold'
+
+[directory]
+format = '[$path]($style)[$read_only]($read_only_style)'
+style = 'blue bold'
+truncation_length = 2
+read_only = '🔒'
+
+[git_branch]
+format = '[$symbol$branch]($style) '
+symbol = '🌱'
+style = 'purple bold'
+
+[git_status]
+format = '[$all_status$ahead_behind]($style)'
+style = 'red'
+
+[git_state]
+format = '[$state( $progress_current/$progress_total)]($style) '
+style = 'yellow'
+
+[python]
+format = '[py $version]($style) '
+style = 'yellow'
+detect_files = ['requirements.txt', 'pyproject.toml', 'Pipfile', '.python-version']
+
+[nodejs]
+format = '[node $version]($style) '
+style = 'green'
+detect_files = ['package.json', '.nvmrc']
+
+[rust]
+format = '[rs $version]($style) '
+style = 'red'
+
+[golang]
+format = '[go $version]($style) '
+style = 'cyan'
+
+[docker_context]
+format = '[docker $context]($style) '
+style = 'blue'
+only_with_files = true
+
+[cmd_duration]
+format = '[took $duration]($style) '
+style = 'yellow dimmed'
+min_time = 2_000

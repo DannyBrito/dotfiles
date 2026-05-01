@@ -62,10 +62,6 @@ for file in $alias_scripts_dir/extra/*; do
 	[ -r "$file" ] && { [ -f "$file" ] || [ -L "$file" ]; } && . "$file";
 done
 
-if [ "${TERM_PROGRAM:-}" = "Apple_Terminal" ]; then
-	export STARSHIP_CONFIG="${HOME}/.config/starship.no-font.toml"
-fi
-
 # Setup fzf key bindings and fuzzy completion (shell-aware)
 case "$-" in
 *i*)
@@ -91,5 +87,8 @@ case "$-" in
 	fi
 	;;
 esac
+
+# Initialize prompt (starship or fallback)
+setup_prompt
 
 unset file 2>/dev/null

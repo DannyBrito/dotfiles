@@ -4,6 +4,8 @@
 export config_dir="${HOME}/.config/db_setup_config"
 export functions_dir="${config_dir}/functions"
 export alias_scripts_dir="${functions_dir}/scripts"
+export starship_configs_dir="${config_dir}/tools/starship/configs"
+export prompt_style_file="${config_dir}/starship-style"
 
 # These variables can be overwritten on the vars.env file
 export dev_dir="/mount/d/dev"
